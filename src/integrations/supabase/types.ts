@@ -14,7 +14,237 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_meta: {
+        Row: {
+          data: Json
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_users: {
+        Row: {
+          data: Json
+          email: string | null
+          gym_id: string | null
+          id: string
+          password_hash: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          email?: string | null
+          gym_id?: string | null
+          id: string
+          password_hash?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          email?: string | null
+          gym_id?: string | null
+          id?: string
+          password_hash?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      checkins: {
+        Row: {
+          data: Json
+          gym_id: string | null
+          id: string
+          member_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          gym_id?: string | null
+          id: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          gym_id?: string | null
+          id?: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      food_logs: {
+        Row: {
+          data: Json
+          id: string
+          member_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gyms: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      health_issues: {
+        Row: {
+          data: Json
+          gym_id: string | null
+          id: string
+          member_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          gym_id?: string | null
+          id: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          gym_id?: string | null
+          id?: string
+          member_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          data: Json
+          gym_id: string | null
+          id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          gym_id?: string | null
+          id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          gym_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          data?: Json
+          id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      plan_requests: {
+        Row: {
+          data: Json
+          gym_id: string | null
+          id: string
+          member_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          gym_id?: string | null
+          id: string
+          member_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          gym_id?: string | null
+          id?: string
+          member_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          data: Json
+          gym_id: string | null
+          id: string
+          scope: string | null
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          gym_id?: string | null
+          id: string
+          scope?: string | null
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          gym_id?: string | null
+          id?: string
+          scope?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
