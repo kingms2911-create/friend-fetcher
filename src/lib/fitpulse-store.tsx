@@ -13,6 +13,19 @@ export const DEFAULT_PASSWORD = "member123";
 export const SUPER_ADMIN_EMAIL = "admin@fitlygym.com";
 export const SUPER_ADMIN_PASSWORD = "SuperAdmin@123";
 
+/** Default gym used by the built-in demo accounts. */
+export const DEMO_GYM_ID = "gym-default-01";
+
+/**
+ * Built-in demo accounts. They always exist locally so sign-in works even when
+ * the backend is unreachable or the account row is missing in the database.
+ */
+export const DEMO_ACCOUNTS = [
+  { id: "u_demo_admin", name: "Demo Super Admin", email: "admin@gym.com", password: "admin123", role: "super_admin" as const, gymId: undefined as string | undefined },
+  { id: "u_demo_owner", name: "Demo Gym Owner", email: "test@gym.com", password: "123456", role: "gym_owner" as const, gymId: DEMO_GYM_ID },
+];
+
+
 
 export type Pricing = { m1: number; m2: number; m3: number };
 
