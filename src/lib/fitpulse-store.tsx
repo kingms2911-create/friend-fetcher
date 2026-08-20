@@ -13,6 +13,19 @@ export const DEFAULT_PASSWORD = "member123";
 export const SUPER_ADMIN_EMAIL = "admin@fitlygym.com";
 export const SUPER_ADMIN_PASSWORD = "SuperAdmin@123";
 
+/** Default gym used by the built-in demo accounts. */
+export const DEMO_GYM_ID = "gym-default-01";
+
+/**
+ * Built-in demo accounts. They always exist locally so sign-in works even when
+ * the backend is unreachable or the account row is missing in the database.
+ */
+export const DEMO_ACCOUNTS = [
+  { id: "u_demo_admin", name: "Demo Super Admin", email: "admin@gym.com", password: "admin123", role: "super_admin" as const, gymId: undefined as string | undefined },
+  { id: "u_demo_owner", name: "Demo Gym Owner", email: "test@gym.com", password: "123456", role: "gym_owner" as const, gymId: DEMO_GYM_ID },
+];
+
+
 
 export type Pricing = { m1: number; m2: number; m3: number };
 
@@ -498,12 +511,46 @@ const StoreContext = createContext<Ctx | null>(null);
 const KEY = "koolfit-state-v2";
 const LEGACY_KEY = "fitpulse-state-v1";
 
+/** Guarantees the built-in demo accounts (and their gym) always exist locally. */
+function ensureDemoAccounts(users: User[], gyms: Gym[]): { users: User[]; gyms: Gym[] } {
+  const nextUsers = [...users];
+  for (const demo of DEMO_ACCOUNTS) {
+    const idx = nextUsers.findIndex((u) => u.email.trim().toLowerCase() === demo.email);
+    const base: User = {
+      id: demo.id,
+      name: demo.name,
+      email: demo.email,
+      password: hashPassword(demo.password),
+      role: demo.role,
+      ...(demo.gymId ? { gymId: demo.gymId } : {}),
+      ownerCreated: false,
+      mustResetPassword: false,
+      joinedAt: iso(new Date()),
+    };
+    if (idx === -1) nextUsers.push(base);
+    else nextUsers[idx] = { ...nextUsers[idx]!, ...base, id: nextUsers[idx]!.id };
+  }
+
+  const nextGyms = gyms.some((g) => g.id === DEMO_GYM_ID)
+    ? gyms
+    : [
+        ...gyms,
+        {
+          id: DEMO_GYM_ID, name: "Demo Fitness Studio", slug: "demo-fitness", code: normalizeGymCode("DEMO24"),
+          ownerId: "u_demo_owner", plan: "Starter", mrr: 0, active: true, pricing: { ...DEFAULT_PRICING },
+          timings: "6:00 AM – 10:00 PM", address: "Demo Street",
+        } as Gym,
+      ];
+
+  return { users: nextUsers, gyms: nextGyms };
+}
+
 /** Fill in fields added after a user's data was first persisted. */
 function migrate(s: State): State {
   // The platform super admin always exists with the current hardcoded credentials.
   const withSuper: User[] = s.users.some((u) => u.role === "super_admin")
     ? s.users.map((u) =>
-        u.role === "super_admin"
+        u.role === "super_admin" && u.email.trim().toLowerCase() !== "admin@gym.com"
           ? { ...u, email: SUPER_ADMIN_EMAIL, password: hashPassword(SUPER_ADMIN_PASSWORD), mustResetPassword: false }
           : u,
       )
@@ -515,6 +562,8 @@ function migrate(s: State): State {
         ...s.users,
       ];
 
+  const demo = ensureDemoAccounts(withSuper, s.gyms);
+
   return {
     ...s,
     leads: s.leads ?? [],
@@ -524,13 +573,14 @@ function migrate(s: State): State {
     products: s.products?.length ? s.products : SEED_PRODUCTS(s.gyms[0]?.id ?? "gym_pulse"),
 
     guest: false,
-    gyms: s.gyms.map((g) => ({
+    gyms: demo.gyms.map((g) => ({
       ...g,
       pricing: g.pricing ?? { ...DEFAULT_PRICING },
       code: normalizeGymCode(g.code),
       active: g.active ?? true,
     })),
-    users: withSuper.map((u) => {
+    users: demo.users.map((u) => {
+
 
       if (u.role !== "member") return u;
       const base: User = {
@@ -554,7 +604,7 @@ function migrate(s: State): State {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(seed);
+  const [state, setState] = useState<State>(() => migrate(seed()));
   const [hydrated, setHydrated] = useState(false);
 
   /** Merge an authenticated cloud snapshot into local state. */
@@ -631,16 +681,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
   const currentGym = state.gyms.find((g) => g.id === currentUser?.gymId) ?? null;
 
-  /** Credentials are always verified on the server; the browser never sees other accounts' hashes. */
+  /**
+   * Credentials are verified on the server. If the backend is unreachable, or the
+   * account row is missing there, we fall back to the local account list so the
+   * user is never stuck on a spinner or a half-finished "signed in" state.
+   */
   const signIn = useCallback<Ctx["signIn"]>(
     async (email, password) => {
       // Always drop any stale/active session before authenticating again.
       clearSession();
       setState((s) => ({ ...s, currentUserId: null, guest: false }));
 
+      const mail = email.trim().toLowerCase();
       const hash = hashPassword(password);
-      const auth = await cloudSignIn({ email: email.trim(), passwordHash: hash });
-      if (!auth.ok || !auth.userId) return { ok: false, error: auth.error ?? "Invalid email or password" };
+
+      /** Sign in against whatever is already in local state. */
+      const localSignIn = (): { ok: boolean; error?: string; user?: User } => {
+        let found: User | undefined;
+        setState((s) => {
+          const match = s.users.find(
+            (u) => u.email.trim().toLowerCase() === mail && hashPassword(u.password) === hash,
+          );
+          if (!match) return s;
+          found = match;
+          return { ...s, currentUserId: match.id, guest: false };
+        });
+        return found ? { ok: true, user: found } : { ok: false, error: "Invalid email or password" };
+      };
+
+      let auth: Awaited<ReturnType<typeof cloudSignIn>>;
+      try {
+        auth = await cloudSignIn({ email: email.trim(), passwordHash: hash });
+      } catch {
+        auth = { ok: false, error: "Could not reach the server" };
+      }
+
+      if (!auth.ok || !auth.userId) {
+        const local = localSignIn();
+        if (local.ok) return local;
+        return { ok: false, error: auth.error ?? "Invalid email or password" };
+      }
 
       const cloud = await loadCloudSnapshot();
       if (cloud) applyCloud(cloud);
@@ -659,11 +739,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // state updates are async — resolve the user from the freshly loaded snapshot too
       const fromCloud = (cloud?.users as unknown as User[] | undefined)?.find((u) => u.id === auth.userId);
       const resolved = user ?? (fromCloud ? { ...fromCloud, mustResetPassword: mustReset } : undefined);
-      if (!resolved) return { ok: false, error: "Account data unavailable, please try again" };
+      // The server authenticated us but the account row is missing/unreadable:
+      // fall back to the local record instead of leaving the user stranded.
+      if (!resolved) {
+        const local = localSignIn();
+        if (local.ok) return local;
+        return { ok: false, error: "Account data unavailable, please try again" };
+      }
       return { ok: true, user: resolved };
     },
     [applyCloud],
   );
+
 
   const signOut = useCallback(() => {
     clearSession();
