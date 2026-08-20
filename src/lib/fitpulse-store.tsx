@@ -604,7 +604,7 @@ function migrate(s: State): State {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(seed);
+  const [state, setState] = useState<State>(() => migrate(seed()));
   const [hydrated, setHydrated] = useState(false);
 
   /** Merge an authenticated cloud snapshot into local state. */
