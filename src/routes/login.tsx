@@ -120,9 +120,10 @@ function LoginPage() {
               />
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit" className="h-10 w-full" disabled={submitting}>
+            <Button type="submit" className="h-10 w-full" disabled={!ready || submitting}>
               {submitting ? "Signing in…" : <>Sign In <ArrowRight className="size-4" /></>}
             </Button>
+
           </div>
 
           <div className="mt-4 flex flex-col gap-2 text-center text-sm">
