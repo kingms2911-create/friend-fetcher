@@ -56,6 +56,9 @@ function LoginPage() {
     setSubmitting(true);
     try {
       const res = await signIn(mail, pass);
+      // The auth request has completed; never leave the form in a pending state
+      // while state propagation or route loading finishes.
+      setSubmitting(false);
       if (!res.ok || !res.user) {
         const message = res.error ?? "Unable to sign in";
         setError(message);
@@ -63,8 +66,8 @@ function LoginPage() {
         return;
       }
       setError("");
-      toast.success("Signed in");
-      await navigate({ to: roleHome[res.user.role], replace: true });
+      const destination = roleHome[res.user.role] ?? "/gym-owner";
+      await navigate({ to: destination, replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong signing in";
       setError(message);

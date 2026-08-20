@@ -25,6 +25,18 @@ export const DEMO_ACCOUNTS = [
   { id: "u_demo_owner", name: "Demo Gym Owner", email: "test@gym.com", password: "123456", role: "gym_owner" as const, gymId: DEMO_GYM_ID },
 ];
 
+const VALID_ROLES: readonly Role[] = ["super_admin", "gym_owner", "trainer", "member"];
+
+/** Keep incomplete legacy/database account rows usable by the session guard. */
+function normalizeUser(user: User): User {
+  const role = VALID_ROLES.includes(user.role) ? user.role : "gym_owner";
+  return {
+    ...user,
+    role,
+    gymId: user.gymId || DEMO_GYM_ID,
+  };
+}
+
 
 
 export type Pricing = { m1: number; m2: number; m3: number };
@@ -579,7 +591,8 @@ function migrate(s: State): State {
       code: normalizeGymCode(g.code),
       active: g.active ?? true,
     })),
-    users: demo.users.map((u) => {
+    users: demo.users.map((rawUser) => {
+      const u = normalizeUser(rawUser);
 
 
       if (u.role !== "member") return u;
@@ -700,11 +713,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         let found: User | undefined;
         setState((s) => {
           const match = s.users.find(
-            (u) => u.email.trim().toLowerCase() === mail && hashPassword(u.password) === hash,
+            (u) =>
+              u.email.trim().toLowerCase() === mail &&
+              (u.password === hash || hashPassword(u.password) === hash),
           );
           if (!match) return s;
-          found = match;
-          return { ...s, currentUserId: match.id, guest: false };
+          found = normalizeUser(match);
+          return {
+            ...s,
+            currentUserId: match.id,
+            guest: false,
+            users: s.users.map((u) => (u.id === match.id ? found as User : u)),
+          };
         });
         return found ? { ok: true, user: found } : { ok: false, error: "Invalid email or password" };
       };
@@ -729,16 +749,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       let user: User | undefined;
       setState((s) => {
         const found = s.users.find((u) => u.id === auth.userId);
-        if (found) user = { ...found, mustResetPassword: mustReset };
+        if (found) user = normalizeUser({ ...found, mustResetPassword: mustReset });
         return {
           ...s,
           currentUserId: auth.userId ?? null,
-          users: s.users.map((u) => (u.id === auth.userId ? { ...u, mustResetPassword: mustReset } : u)),
+          users: s.users.map((u) => (u.id === auth.userId && user ? user : u)),
         };
       });
       // state updates are async — resolve the user from the freshly loaded snapshot too
       const fromCloud = (cloud?.users as unknown as User[] | undefined)?.find((u) => u.id === auth.userId);
-      const resolved = user ?? (fromCloud ? { ...fromCloud, mustResetPassword: mustReset } : undefined);
+      const resolved = user ?? (fromCloud ? normalizeUser({ ...fromCloud, mustResetPassword: mustReset }) : undefined);
       // The server authenticated us but the account row is missing/unreadable:
       // fall back to the local record instead of leaving the user stranded.
       if (!resolved) {
