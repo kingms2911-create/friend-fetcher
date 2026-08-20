@@ -511,12 +511,46 @@ const StoreContext = createContext<Ctx | null>(null);
 const KEY = "koolfit-state-v2";
 const LEGACY_KEY = "fitpulse-state-v1";
 
+/** Guarantees the built-in demo accounts (and their gym) always exist locally. */
+function ensureDemoAccounts(users: User[], gyms: Gym[]): { users: User[]; gyms: Gym[] } {
+  const nextUsers = [...users];
+  for (const demo of DEMO_ACCOUNTS) {
+    const idx = nextUsers.findIndex((u) => u.email.trim().toLowerCase() === demo.email);
+    const base: User = {
+      id: demo.id,
+      name: demo.name,
+      email: demo.email,
+      password: hashPassword(demo.password),
+      role: demo.role,
+      ...(demo.gymId ? { gymId: demo.gymId } : {}),
+      ownerCreated: false,
+      mustResetPassword: false,
+      joinedAt: iso(new Date()),
+    };
+    if (idx === -1) nextUsers.push(base);
+    else nextUsers[idx] = { ...nextUsers[idx]!, ...base, id: nextUsers[idx]!.id };
+  }
+
+  const nextGyms = gyms.some((g) => g.id === DEMO_GYM_ID)
+    ? gyms
+    : [
+        ...gyms,
+        {
+          id: DEMO_GYM_ID, name: "Demo Fitness Studio", slug: "demo-fitness", code: normalizeGymCode("DEMO24"),
+          ownerId: "u_demo_owner", plan: "Starter", mrr: 0, active: true, pricing: { ...DEFAULT_PRICING },
+          timings: "6:00 AM – 10:00 PM", address: "Demo Street",
+        } as Gym,
+      ];
+
+  return { users: nextUsers, gyms: nextGyms };
+}
+
 /** Fill in fields added after a user's data was first persisted. */
 function migrate(s: State): State {
   // The platform super admin always exists with the current hardcoded credentials.
   const withSuper: User[] = s.users.some((u) => u.role === "super_admin")
     ? s.users.map((u) =>
-        u.role === "super_admin"
+        u.role === "super_admin" && u.email.trim().toLowerCase() !== "admin@gym.com"
           ? { ...u, email: SUPER_ADMIN_EMAIL, password: hashPassword(SUPER_ADMIN_PASSWORD), mustResetPassword: false }
           : u,
       )
@@ -528,6 +562,8 @@ function migrate(s: State): State {
         ...s.users,
       ];
 
+  const demo = ensureDemoAccounts(withSuper, s.gyms);
+
   return {
     ...s,
     leads: s.leads ?? [],
@@ -537,13 +573,14 @@ function migrate(s: State): State {
     products: s.products?.length ? s.products : SEED_PRODUCTS(s.gyms[0]?.id ?? "gym_pulse"),
 
     guest: false,
-    gyms: s.gyms.map((g) => ({
+    gyms: demo.gyms.map((g) => ({
       ...g,
       pricing: g.pricing ?? { ...DEFAULT_PRICING },
       code: normalizeGymCode(g.code),
       active: g.active ?? true,
     })),
-    users: withSuper.map((u) => {
+    users: demo.users.map((u) => {
+
 
       if (u.role !== "member") return u;
       const base: User = {
