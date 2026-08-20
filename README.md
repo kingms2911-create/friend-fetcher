@@ -1,12 +1,12 @@
-# Friend Fetcher
+# GitHub Import Hub
 
-Please import this project https://github.com/kingms2911-create/friend-repo-fetch
+Import project from github
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/0ba39076-57d8-475c-a16c-642338881a2e).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/decbdc00-3b9b-4324-bd09-117efeacec1e).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

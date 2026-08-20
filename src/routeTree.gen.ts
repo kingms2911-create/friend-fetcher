@@ -10,33 +10,271 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as GymOwnerRouteImport } from './routes/gym-owner'
+import { Route as JoinRouteImport } from './routes/join'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MemberGymRouteImport } from './routes/member-gym'
+import { Route as MemberHealthRouteImport } from './routes/member-health'
+import { Route as MemberPlanRouteImport } from './routes/member-plan'
+import { Route as MemberPortalRouteImport } from './routes/member-portal'
+import { Route as MemberStoreRouteImport } from './routes/member-store'
+import { Route as OwnerAttendanceRouteImport } from './routes/owner-attendance'
+import { Route as OwnerLeadsRouteImport } from './routes/owner-leads'
+import { Route as OwnerMembersRouteImport } from './routes/owner-members'
+import { Route as OwnerPlansRouteImport } from './routes/owner-plans'
+import { Route as OwnerStoreRouteImport } from './routes/owner-store'
+import { Route as RegisterGymRouteImport } from './routes/register-gym'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SuperAdminRouteImport } from './routes/super-admin'
+import { Route as TrainerPortalRouteImport } from './routes/trainer-portal'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GymOwnerRoute = GymOwnerRouteImport.update({
+  id: '/gym-owner',
+  path: '/gym-owner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberGymRoute = MemberGymRouteImport.update({
+  id: '/member-gym',
+  path: '/member-gym',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberHealthRoute = MemberHealthRouteImport.update({
+  id: '/member-health',
+  path: '/member-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberPlanRoute = MemberPlanRouteImport.update({
+  id: '/member-plan',
+  path: '/member-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberPortalRoute = MemberPortalRouteImport.update({
+  id: '/member-portal',
+  path: '/member-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemberStoreRoute = MemberStoreRouteImport.update({
+  id: '/member-store',
+  path: '/member-store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerAttendanceRoute = OwnerAttendanceRouteImport.update({
+  id: '/owner-attendance',
+  path: '/owner-attendance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerLeadsRoute = OwnerLeadsRouteImport.update({
+  id: '/owner-leads',
+  path: '/owner-leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerMembersRoute = OwnerMembersRouteImport.update({
+  id: '/owner-members',
+  path: '/owner-members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerPlansRoute = OwnerPlansRouteImport.update({
+  id: '/owner-plans',
+  path: '/owner-plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerStoreRoute = OwnerStoreRouteImport.update({
+  id: '/owner-store',
+  path: '/owner-store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterGymRoute = RegisterGymRouteImport.update({
+  id: '/register-gym',
+  path: '/register-gym',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuperAdminRoute = SuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainerPortalRoute = TrainerPortalRouteImport.update({
+  id: '/trainer-portal',
+  path: '/trainer-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
+  '/gym-owner': typeof GymOwnerRoute
+  '/join': typeof JoinRoute
+  '/login': typeof LoginRoute
+  '/member-gym': typeof MemberGymRoute
+  '/member-health': typeof MemberHealthRoute
+  '/member-plan': typeof MemberPlanRoute
+  '/member-portal': typeof MemberPortalRoute
+  '/member-store': typeof MemberStoreRoute
+  '/owner-attendance': typeof OwnerAttendanceRoute
+  '/owner-leads': typeof OwnerLeadsRoute
+  '/owner-members': typeof OwnerMembersRoute
+  '/owner-plans': typeof OwnerPlansRoute
+  '/owner-store': typeof OwnerStoreRoute
+  '/register-gym': typeof RegisterGymRoute
+  '/signup': typeof SignupRoute
+  '/super-admin': typeof SuperAdminRoute
+  '/trainer-portal': typeof TrainerPortalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
+  '/gym-owner': typeof GymOwnerRoute
+  '/join': typeof JoinRoute
+  '/login': typeof LoginRoute
+  '/member-gym': typeof MemberGymRoute
+  '/member-health': typeof MemberHealthRoute
+  '/member-plan': typeof MemberPlanRoute
+  '/member-portal': typeof MemberPortalRoute
+  '/member-store': typeof MemberStoreRoute
+  '/owner-attendance': typeof OwnerAttendanceRoute
+  '/owner-leads': typeof OwnerLeadsRoute
+  '/owner-members': typeof OwnerMembersRoute
+  '/owner-plans': typeof OwnerPlansRoute
+  '/owner-store': typeof OwnerStoreRoute
+  '/register-gym': typeof RegisterGymRoute
+  '/signup': typeof SignupRoute
+  '/super-admin': typeof SuperAdminRoute
+  '/trainer-portal': typeof TrainerPortalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRoute
+  '/gym-owner': typeof GymOwnerRoute
+  '/join': typeof JoinRoute
+  '/login': typeof LoginRoute
+  '/member-gym': typeof MemberGymRoute
+  '/member-health': typeof MemberHealthRoute
+  '/member-plan': typeof MemberPlanRoute
+  '/member-portal': typeof MemberPortalRoute
+  '/member-store': typeof MemberStoreRoute
+  '/owner-attendance': typeof OwnerAttendanceRoute
+  '/owner-leads': typeof OwnerLeadsRoute
+  '/owner-members': typeof OwnerMembersRoute
+  '/owner-plans': typeof OwnerPlansRoute
+  '/owner-store': typeof OwnerStoreRoute
+  '/register-gym': typeof RegisterGymRoute
+  '/signup': typeof SignupRoute
+  '/super-admin': typeof SuperAdminRoute
+  '/trainer-portal': typeof TrainerPortalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/checkout'
+    | '/gym-owner'
+    | '/join'
+    | '/login'
+    | '/member-gym'
+    | '/member-health'
+    | '/member-plan'
+    | '/member-portal'
+    | '/member-store'
+    | '/owner-attendance'
+    | '/owner-leads'
+    | '/owner-members'
+    | '/owner-plans'
+    | '/owner-store'
+    | '/register-gym'
+    | '/signup'
+    | '/super-admin'
+    | '/trainer-portal'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/checkout'
+    | '/gym-owner'
+    | '/join'
+    | '/login'
+    | '/member-gym'
+    | '/member-health'
+    | '/member-plan'
+    | '/member-portal'
+    | '/member-store'
+    | '/owner-attendance'
+    | '/owner-leads'
+    | '/owner-members'
+    | '/owner-plans'
+    | '/owner-store'
+    | '/register-gym'
+    | '/signup'
+    | '/super-admin'
+    | '/trainer-portal'
+  id:
+    | '__root__'
+    | '/'
+    | '/checkout'
+    | '/gym-owner'
+    | '/join'
+    | '/login'
+    | '/member-gym'
+    | '/member-health'
+    | '/member-plan'
+    | '/member-portal'
+    | '/member-store'
+    | '/owner-attendance'
+    | '/owner-leads'
+    | '/owner-members'
+    | '/owner-plans'
+    | '/owner-store'
+    | '/register-gym'
+    | '/signup'
+    | '/super-admin'
+    | '/trainer-portal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CheckoutRoute: typeof CheckoutRoute
+  GymOwnerRoute: typeof GymOwnerRoute
+  JoinRoute: typeof JoinRoute
+  LoginRoute: typeof LoginRoute
+  MemberGymRoute: typeof MemberGymRoute
+  MemberHealthRoute: typeof MemberHealthRoute
+  MemberPlanRoute: typeof MemberPlanRoute
+  MemberPortalRoute: typeof MemberPortalRoute
+  MemberStoreRoute: typeof MemberStoreRoute
+  OwnerAttendanceRoute: typeof OwnerAttendanceRoute
+  OwnerLeadsRoute: typeof OwnerLeadsRoute
+  OwnerMembersRoute: typeof OwnerMembersRoute
+  OwnerPlansRoute: typeof OwnerPlansRoute
+  OwnerStoreRoute: typeof OwnerStoreRoute
+  RegisterGymRoute: typeof RegisterGymRoute
+  SignupRoute: typeof SignupRoute
+  SuperAdminRoute: typeof SuperAdminRoute
+  TrainerPortalRoute: typeof TrainerPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +286,155 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gym-owner': {
+      id: '/gym-owner'
+      path: '/gym-owner'
+      fullPath: '/gym-owner'
+      preLoaderRoute: typeof GymOwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member-gym': {
+      id: '/member-gym'
+      path: '/member-gym'
+      fullPath: '/member-gym'
+      preLoaderRoute: typeof MemberGymRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member-health': {
+      id: '/member-health'
+      path: '/member-health'
+      fullPath: '/member-health'
+      preLoaderRoute: typeof MemberHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member-plan': {
+      id: '/member-plan'
+      path: '/member-plan'
+      fullPath: '/member-plan'
+      preLoaderRoute: typeof MemberPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member-portal': {
+      id: '/member-portal'
+      path: '/member-portal'
+      fullPath: '/member-portal'
+      preLoaderRoute: typeof MemberPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/member-store': {
+      id: '/member-store'
+      path: '/member-store'
+      fullPath: '/member-store'
+      preLoaderRoute: typeof MemberStoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-attendance': {
+      id: '/owner-attendance'
+      path: '/owner-attendance'
+      fullPath: '/owner-attendance'
+      preLoaderRoute: typeof OwnerAttendanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-leads': {
+      id: '/owner-leads'
+      path: '/owner-leads'
+      fullPath: '/owner-leads'
+      preLoaderRoute: typeof OwnerLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-members': {
+      id: '/owner-members'
+      path: '/owner-members'
+      fullPath: '/owner-members'
+      preLoaderRoute: typeof OwnerMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-plans': {
+      id: '/owner-plans'
+      path: '/owner-plans'
+      fullPath: '/owner-plans'
+      preLoaderRoute: typeof OwnerPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-store': {
+      id: '/owner-store'
+      path: '/owner-store'
+      fullPath: '/owner-store'
+      preLoaderRoute: typeof OwnerStoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register-gym': {
+      id: '/register-gym'
+      path: '/register-gym'
+      fullPath: '/register-gym'
+      preLoaderRoute: typeof RegisterGymRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/super-admin': {
+      id: '/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof SuperAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trainer-portal': {
+      id: '/trainer-portal'
+      path: '/trainer-portal'
+      fullPath: '/trainer-portal'
+      preLoaderRoute: typeof TrainerPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CheckoutRoute: CheckoutRoute,
+  GymOwnerRoute: GymOwnerRoute,
+  JoinRoute: JoinRoute,
+  LoginRoute: LoginRoute,
+  MemberGymRoute: MemberGymRoute,
+  MemberHealthRoute: MemberHealthRoute,
+  MemberPlanRoute: MemberPlanRoute,
+  MemberPortalRoute: MemberPortalRoute,
+  MemberStoreRoute: MemberStoreRoute,
+  OwnerAttendanceRoute: OwnerAttendanceRoute,
+  OwnerLeadsRoute: OwnerLeadsRoute,
+  OwnerMembersRoute: OwnerMembersRoute,
+  OwnerPlansRoute: OwnerPlansRoute,
+  OwnerStoreRoute: OwnerStoreRoute,
+  RegisterGymRoute: RegisterGymRoute,
+  SignupRoute: SignupRoute,
+  SuperAdminRoute: SuperAdminRoute,
+  TrainerPortalRoute: TrainerPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
