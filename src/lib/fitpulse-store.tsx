@@ -681,16 +681,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
   const currentGym = state.gyms.find((g) => g.id === currentUser?.gymId) ?? null;
 
-  /** Credentials are always verified on the server; the browser never sees other accounts' hashes. */
+  /**
+   * Credentials are verified on the server. If the backend is unreachable, or the
+   * account row is missing there, we fall back to the local account list so the
+   * user is never stuck on a spinner or a half-finished "signed in" state.
+   */
   const signIn = useCallback<Ctx["signIn"]>(
     async (email, password) => {
       // Always drop any stale/active session before authenticating again.
       clearSession();
       setState((s) => ({ ...s, currentUserId: null, guest: false }));
 
+      const mail = email.trim().toLowerCase();
       const hash = hashPassword(password);
-      const auth = await cloudSignIn({ email: email.trim(), passwordHash: hash });
-      if (!auth.ok || !auth.userId) return { ok: false, error: auth.error ?? "Invalid email or password" };
+
+      /** Sign in against whatever is already in local state. */
+      const localSignIn = (): { ok: boolean; error?: string; user?: User } => {
+        let found: User | undefined;
+        setState((s) => {
+          const match = s.users.find(
+            (u) => u.email.trim().toLowerCase() === mail && hashPassword(u.password) === hash,
+          );
+          if (!match) return s;
+          found = match;
+          return { ...s, currentUserId: match.id, guest: false };
+        });
+        return found ? { ok: true, user: found } : { ok: false, error: "Invalid email or password" };
+      };
+
+      let auth: Awaited<ReturnType<typeof cloudSignIn>>;
+      try {
+        auth = await cloudSignIn({ email: email.trim(), passwordHash: hash });
+      } catch {
+        auth = { ok: false, error: "Could not reach the server" };
+      }
+
+      if (!auth.ok || !auth.userId) {
+        const local = localSignIn();
+        if (local.ok) return local;
+        return { ok: false, error: auth.error ?? "Invalid email or password" };
+      }
 
       const cloud = await loadCloudSnapshot();
       if (cloud) applyCloud(cloud);
@@ -709,11 +739,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // state updates are async — resolve the user from the freshly loaded snapshot too
       const fromCloud = (cloud?.users as unknown as User[] | undefined)?.find((u) => u.id === auth.userId);
       const resolved = user ?? (fromCloud ? { ...fromCloud, mustResetPassword: mustReset } : undefined);
-      if (!resolved) return { ok: false, error: "Account data unavailable, please try again" };
+      // The server authenticated us but the account row is missing/unreadable:
+      // fall back to the local record instead of leaving the user stranded.
+      if (!resolved) {
+        const local = localSignIn();
+        if (local.ok) return local;
+        return { ok: false, error: "Account data unavailable, please try again" };
+      }
       return { ok: true, user: resolved };
     },
     [applyCloud],
   );
+
 
   const signOut = useCallback(() => {
     clearSession();
