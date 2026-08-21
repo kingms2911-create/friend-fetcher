@@ -146,7 +146,15 @@ function OwnerDashboard() {
                     unpaid
                   </span>
                   <Button size="sm" onClick={() => approveMemberPayment(m.id)}>
-                    <Check className="size-4" /> Approve &amp; Mark Paid
+                    <Check className="size-4" /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/50 bg-secondary text-destructive hover:bg-destructive/10"
+                    onClick={() => rejectMember(m.id)}
+                  >
+                    <X className="size-4" /> Reject
                   </Button>
                 </div>
               );
