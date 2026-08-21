@@ -696,9 +696,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state, hydrated]);
 
+  /** Pull the latest cloud snapshot (join requests, approvals, plans…). */
+  const refresh = useCallback<Ctx["refresh"]>(async () => {
+    const cloud = await loadCloudSnapshot();
+    if (cloud) applyCloud(cloud);
+  }, [applyCloud]);
 
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
   const currentGym = state.gyms.find((g) => g.id === currentUser?.gymId) ?? null;
+
+  // Live-ish updates for gym staff: poll while the tab is visible and refetch
+  // whenever the owner comes back to it, so new join requests appear without a
+  // manual page reload.
+  const staffId = currentUser && currentUser.role !== "member" ? currentUser.id : null;
+  useEffect(() => {
+    if (!hydrated || !staffId) return;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void refresh();
+    };
+    const timer = setInterval(tick, 15_000);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [hydrated, staffId, refresh]);
 
   /**
    * Credentials are verified on the server. If the backend is unreachable, or the
