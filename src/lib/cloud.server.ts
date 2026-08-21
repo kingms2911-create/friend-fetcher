@@ -197,6 +197,13 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
     }
     const prev = byId.get(id);
     const requestedRole = str(u["role"]);
+    const prevRole = String(prev?.["role"] ?? "");
+    // A brand-new self-registration row starts as "pending": the account owner
+    // may complete it once (role + gym) so join-by-code actually lands them in
+    // the right gym. Escalation to super_admin is still blocked.
+    const selfBootstrap = id === callerId && (prevRole === "pending" || prevRole === "");
+    const mayWriteRole = !prev || isAdminRole || selfBootstrap;
+    const safeRole = requestedRole === "super_admin" && !isAdminRole ? "member" : requestedRole;
     return {
       id,
       email: str(u["email"]) ?? "",
@@ -207,8 +214,8 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
           : String(prev["password_hash"] ?? "")
         : (password ?? ""),
       // roles of existing accounts can only be changed by gym staff / platform admins
-      role: prev && !isAdminRole ? prev["role"] : requestedRole === "super_admin" && !prev ? "member" : requestedRole,
-      gym_id: prev && !isAdminRole ? prev["gym_id"] : str(u["gymId"]),
+      role: mayWriteRole ? safeRole : prev["role"],
+      gym_id: mayWriteRole ? str(u["gymId"]) : prev["gym_id"],
       data: rest,
       updated_at: new Date().toISOString(),
     };
