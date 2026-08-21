@@ -112,6 +112,8 @@ export type User = {
   requestedMonths?: 1 | 2 | 3;
   /** member asked to renew at the front desk and is waiting for the owner */
   renewalPending?: boolean;
+  /** owner rejected the join request — keeps the row but hides it from approvals */
+  rejected?: boolean;
   /** plan assigned by the owner / trainer */
   assignedPlan?: AssignedPlan;
   /** daily calorie goal used by the diet generator + dashboard tracker */
