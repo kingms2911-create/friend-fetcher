@@ -475,6 +475,10 @@ type Ctx = {
   }) => Promise<{ ok: boolean; error?: string; userId?: string }>;
   confirmOnlinePayment: (memberId: string, months: 1 | 2 | 3) => { ok: boolean; error?: string };
   approveMemberPayment: (memberId: string) => { ok: boolean; error?: string };
+  /** owner declines a pending join request */
+  rejectMember: (memberId: string) => { ok: boolean; error?: string };
+  /** re-pull the cloud snapshot (used for live approval updates) */
+  refresh: () => Promise<void>;
   createMember: (v: { name: string; email: string; phone: string }) => { ok: boolean; error?: string };
   createTrainer: (v: { name: string; email: string; password: string }) => { ok: boolean; error?: string };
   resetPassword: (password: string) => void;
