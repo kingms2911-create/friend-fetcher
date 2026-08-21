@@ -830,7 +830,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ownerCreated: false, mustResetPassword: false, trainerId: trainer?.id, joinedAt: iso(new Date()), streak: 0, attendanceToday: false,
         status: "pending_approval", paymentStatus: "unpaid", paymentMethod: v.paymentMethod, requestedMonths: v.months,
       };
-      return { ...s, users: [...s.users.filter((u) => u.id !== id), member], currentUserId: id };
+      // Track the join request in the gym's pipeline so the owner sees it in
+      // the CRM as well as the approvals queue.
+      const lead: Lead = {
+        id: `l_${uid()}`,
+        gymId: gym.id,
+        name: member.name,
+        phone: v.phone,
+        note: `Join request · ${planLabel(v.months)} · ${v.paymentMethod === "gym" ? "pay at gym" : "paid online"}`,
+        status: "new",
+        createdAt: iso(new Date()),
+      };
+      const staff = s.users
+        .filter((u) => u.gymId === gym.id && (u.role === "gym_owner" || u.role === "trainer"))
+        .map((u) => u.id);
+      return pushNote(
+        {
+          ...s,
+          users: [...s.users.filter((u) => u.id !== id), member],
+          leads: [lead, ...(s.leads ?? [])],
+          currentUserId: id,
+        },
+        staff,
+        "New join request",
+        `${member.name} requested to join (${planLabel(v.months)}) and is waiting for approval.`,
+        { href: "/gym-owner" },
+      );
+    });
+    return res;
+  }, []);
+
+  /** Owner declines a pending join request. */
+  const rejectMember = useCallback<Ctx["rejectMember"]>((memberId) => {
+    let res: { ok: boolean; error?: string } = { ok: true };
+    setState((s) => {
+      const member = s.users.find((u) => u.id === memberId);
+      if (!member || member.role !== "member") {
+        res = { ok: false, error: "Member not found" };
+        return s;
+      }
+      return pushNote(
+        {
+          ...s,
+          users: s.users.map((u) =>
+            u.id === memberId
+              ? { ...u, rejected: true, status: "pending_approval" as const, paymentStatus: "unpaid" as const }
+              : u,
+          ),
+          leads: (s.leads ?? []).map((l) =>
+            l.gymId === member.gymId && l.name === member.name && l.status === "new"
+              ? { ...l, status: "lost" as const }
+              : l,
+          ),
+        },
+        [memberId],
+        "Join request declined",
+        "Your gym could not approve this request. Please contact the front desk.",
+      );
     });
     return res;
   }, []);
