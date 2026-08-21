@@ -37,16 +37,21 @@ const statusStyles: Record<string, string> = {
 };
 
 function OwnerDashboard() {
-  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, approveRenewal, sendAnnouncement, updateGymContacts } =
+  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, rejectMember, refresh, approveRenewal, sendAnnouncement, updateGymContacts } =
     useStore();
 
   const [modal, setModal] = useState<null | "member" | "trainer">(null);
+
+  // Pull the freshest join requests as soon as the dashboard opens.
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const gymMembers = useMemo(
     () => state.users.filter((u) => u.role === "member" && u.gymId === currentUser?.gymId),
     [state.users, currentUser],
   );
-  const pendingMembers = gymMembers.filter((m) => m.status === "pending_approval");
+  const pendingMembers = gymMembers.filter((m) => m.status === "pending_approval" && !m.rejected);
   const renewalMembers = gymMembers.filter((m) => m.renewalPending);
   const members = gymMembers.filter((m) => m.status !== "pending_approval");
   const trainers = state.users.filter((u) => u.role === "trainer" && u.gymId === currentUser?.gymId);
@@ -141,7 +146,15 @@ function OwnerDashboard() {
                     unpaid
                   </span>
                   <Button size="sm" onClick={() => approveMemberPayment(m.id)}>
-                    <Check className="size-4" /> Approve &amp; Mark Paid
+                    <Check className="size-4" /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/50 bg-secondary text-destructive hover:bg-destructive/10"
+                    onClick={() => rejectMember(m.id)}
+                  >
+                    <X className="size-4" /> Reject
                   </Button>
                 </div>
               );

@@ -112,6 +112,8 @@ export type User = {
   requestedMonths?: 1 | 2 | 3;
   /** member asked to renew at the front desk and is waiting for the owner */
   renewalPending?: boolean;
+  /** owner rejected the join request — keeps the row but hides it from approvals */
+  rejected?: boolean;
   /** plan assigned by the owner / trainer */
   assignedPlan?: AssignedPlan;
   /** daily calorie goal used by the diet generator + dashboard tracker */
@@ -473,6 +475,10 @@ type Ctx = {
   }) => Promise<{ ok: boolean; error?: string; userId?: string }>;
   confirmOnlinePayment: (memberId: string, months: 1 | 2 | 3) => { ok: boolean; error?: string };
   approveMemberPayment: (memberId: string) => { ok: boolean; error?: string };
+  /** owner declines a pending join request */
+  rejectMember: (memberId: string) => { ok: boolean; error?: string };
+  /** re-pull the cloud snapshot (used for live approval updates) */
+  refresh: () => Promise<void>;
   createMember: (v: { name: string; email: string; phone: string }) => { ok: boolean; error?: string };
   createTrainer: (v: { name: string; email: string; password: string }) => { ok: boolean; error?: string };
   resetPassword: (password: string) => void;
@@ -690,9 +696,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state, hydrated]);
 
+  /** Pull the latest cloud snapshot (join requests, approvals, plans…). */
+  const refresh = useCallback<Ctx["refresh"]>(async () => {
+    const cloud = await loadCloudSnapshot();
+    if (cloud) applyCloud(cloud);
+  }, [applyCloud]);
 
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
   const currentGym = state.gyms.find((g) => g.id === currentUser?.gymId) ?? null;
+
+  // Live-ish updates for gym staff: poll while the tab is visible and refetch
+  // whenever the owner comes back to it, so new join requests appear without a
+  // manual page reload.
+  const staffId = currentUser && currentUser.role !== "member" ? currentUser.id : null;
+  useEffect(() => {
+    if (!hydrated || !staffId) return;
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void refresh();
+    };
+    const timer = setInterval(tick, 15_000);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [hydrated, staffId, refresh]);
 
   /**
    * Credentials are verified on the server. If the backend is unreachable, or the
@@ -824,7 +855,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ownerCreated: false, mustResetPassword: false, trainerId: trainer?.id, joinedAt: iso(new Date()), streak: 0, attendanceToday: false,
         status: "pending_approval", paymentStatus: "unpaid", paymentMethod: v.paymentMethod, requestedMonths: v.months,
       };
-      return { ...s, users: [...s.users.filter((u) => u.id !== id), member], currentUserId: id };
+      // Track the join request in the gym's pipeline so the owner sees it in
+      // the CRM as well as the approvals queue.
+      const lead: Lead = {
+        id: `l_${uid()}`,
+        gymId: gym.id,
+        name: member.name,
+        phone: v.phone,
+        note: `Join request · ${planLabel(v.months)} · ${v.paymentMethod === "gym" ? "pay at gym" : "paid online"}`,
+        status: "new",
+        createdAt: iso(new Date()),
+      };
+      const staff = s.users
+        .filter((u) => u.gymId === gym.id && (u.role === "gym_owner" || u.role === "trainer"))
+        .map((u) => u.id);
+      return pushNote(
+        {
+          ...s,
+          users: [...s.users.filter((u) => u.id !== id), member],
+          leads: [lead, ...(s.leads ?? [])],
+          currentUserId: id,
+        },
+        staff,
+        "New join request",
+        `${member.name} requested to join (${planLabel(v.months)}) and is waiting for approval.`,
+        { href: "/gym-owner" },
+      );
+    });
+    return res;
+  }, []);
+
+  /** Owner declines a pending join request. */
+  const rejectMember = useCallback<Ctx["rejectMember"]>((memberId) => {
+    let res: { ok: boolean; error?: string } = { ok: true };
+    setState((s) => {
+      const member = s.users.find((u) => u.id === memberId);
+      if (!member || member.role !== "member") {
+        res = { ok: false, error: "Member not found" };
+        return s;
+      }
+      return pushNote(
+        {
+          ...s,
+          users: s.users.map((u) =>
+            u.id === memberId
+              ? { ...u, rejected: true, status: "pending_approval" as const, paymentStatus: "unpaid" as const }
+              : u,
+          ),
+          leads: (s.leads ?? []).map((l) =>
+            l.gymId === member.gymId && l.name === member.name && l.status === "new"
+              ? { ...l, status: "lost" as const }
+              : l,
+          ),
+        },
+        [memberId],
+        "Join request declined",
+        "Your gym could not approve this request. Please contact the front desk.",
+      );
     });
     return res;
   }, []);
@@ -1309,8 +1396,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
-    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
+    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
+    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
   );
 
 
