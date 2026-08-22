@@ -177,6 +177,17 @@ async function syncTable(db: AnyRec, table: string, rows: AnyRec[], prune: boole
   await (ids.length ? query.not(idKey, "in", `(${ids.join(",")})`) : query.neq(idKey, "__none__"));
 }
 
+/** Food logs prune within the caller's own rows even for members. */
+async function syncFoodLogs(db: AnyRec, rows: AnyRec[], isAdminRole: boolean, callerId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = db as any;
+  if (rows.length) await client.from("food_logs").upsert(rows, { onConflict: "id" });
+  const ids = rows.map((r) => String(r["id"]));
+  let query = client.from("food_logs").delete();
+  if (!isAdminRole) query = query.eq("member_id", callerId);
+  await (ids.length ? query.not("id", "in", `(${ids.join(",")})`) : query.neq("id", "__none__"));
+}
+
 /**
  * Persist the app state for an authenticated session.
  * Credentials and roles of *other* accounts are never taken from the client,
@@ -237,7 +248,7 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
   const client = db as any;
   await Promise.all([
     userRows.length ? client.from("app_users").upsert(userRows, { onConflict: "id" }) : Promise.resolve(),
-    syncTable(db, "food_logs", foodLogRows, isAdminRole),
+    syncFoodLogs(db, foodLogRows, isAdminRole, callerId),
     syncTable(db, "gyms", simple(snapshot.gyms), isAdminRole),
     syncTable(db, "plan_requests", simple(snapshot.requests, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]), status: str(r["status"]) })), isAdminRole),
     syncTable(db, "leads", simple(snapshot.leads, (r) => ({ gym_id: str(r["gymId"]), status: str(r["status"]) })), isAdminRole),
