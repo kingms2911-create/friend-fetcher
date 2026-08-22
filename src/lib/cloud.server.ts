@@ -164,13 +164,28 @@ export async function readSnapshot(token: string): Promise<CloudSnapshot | null>
   };
 }
 
-async function syncTable(db: AnyRec, table: string, rows: AnyRec[], idKey = "id") {
+async function syncTable(db: AnyRec, table: string, rows: AnyRec[], prune: boolean, idKey = "id") {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = db as any;
   if (rows.length) await client.from(table).upsert(rows, { onConflict: idKey });
+  // Only gym staff / platform admins may remove rows. A member's snapshot is
+  // always a partial, possibly stale view, so it must never delete other
+  // people's data (join requests, approvals, leads…).
+  if (!prune) return;
   const ids = rows.map((r) => String(r[idKey]));
   const query = client.from(table).delete();
   await (ids.length ? query.not(idKey, "in", `(${ids.join(",")})`) : query.neq(idKey, "__none__"));
+}
+
+/** Food logs prune within the caller's own rows even for members. */
+async function syncFoodLogs(db: AnyRec, rows: AnyRec[], isAdminRole: boolean, callerId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = db as any;
+  if (rows.length) await client.from("food_logs").upsert(rows, { onConflict: "id" });
+  const ids = rows.map((r) => String(r["id"]));
+  let query = client.from("food_logs").delete();
+  if (!isAdminRole) query = query.eq("member_id", callerId);
+  await (ids.length ? query.not("id", "in", `(${ids.join(",")})`) : query.neq("id", "__none__"));
 }
 
 /**
@@ -189,7 +204,12 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
   const isAdminRole = callerRole === "super_admin" || callerRole === "gym_owner" || callerRole === "trainer";
 
   const foodLogRows: AnyRec[] = [];
-  const userRows = snapshot.users.map((u) => {
+  // Non-staff callers only ever write their own account row: a stale member
+  // snapshot must not overwrite an owner's approval decisions.
+  const writableUsers = isAdminRole
+    ? snapshot.users
+    : snapshot.users.filter((u) => String(u["id"]) === callerId);
+  const userRows = writableUsers.map((u) => {
     const { password, foodLog, ...rest } = u as AnyRec & { password?: string; foodLog?: AnyRec[] };
     const id = String(u["id"]);
     for (const entry of foodLog ?? []) {
@@ -228,14 +248,14 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
   const client = db as any;
   await Promise.all([
     userRows.length ? client.from("app_users").upsert(userRows, { onConflict: "id" }) : Promise.resolve(),
-    syncTable(db, "food_logs", foodLogRows),
-    syncTable(db, "gyms", simple(snapshot.gyms)),
-    syncTable(db, "plan_requests", simple(snapshot.requests, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]), status: str(r["status"]) }))),
-    syncTable(db, "leads", simple(snapshot.leads, (r) => ({ gym_id: str(r["gymId"]), status: str(r["status"]) }))),
-    syncTable(db, "checkins", simple(snapshot.checkins, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]) }))),
-    syncTable(db, "notifications", simple(snapshot.notifications, (r) => ({ user_id: str(r["userId"]) }))),
-    syncTable(db, "health_issues", simple(snapshot.healthIssues, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]) }))),
-    syncTable(db, "products", simple(snapshot.products, (r) => ({ scope: str(r["scope"]), gym_id: str(r["gymId"]) }))),
+    syncFoodLogs(db, foodLogRows, isAdminRole, callerId),
+    syncTable(db, "gyms", simple(snapshot.gyms), isAdminRole),
+    syncTable(db, "plan_requests", simple(snapshot.requests, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]), status: str(r["status"]) })), isAdminRole),
+    syncTable(db, "leads", simple(snapshot.leads, (r) => ({ gym_id: str(r["gymId"]), status: str(r["status"]) })), isAdminRole),
+    syncTable(db, "checkins", simple(snapshot.checkins, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]) })), isAdminRole),
+    syncTable(db, "notifications", simple(snapshot.notifications, (r) => ({ user_id: str(r["userId"]) })), isAdminRole),
+    syncTable(db, "health_issues", simple(snapshot.healthIssues, (r) => ({ member_id: str(r["memberId"]), gym_id: str(r["gymId"]) })), isAdminRole),
+    syncTable(db, "products", simple(snapshot.products, (r) => ({ scope: str(r["scope"]), gym_id: str(r["gymId"]) })), isAdminRole),
     client.from("app_meta").upsert(
       [
         { key: "workoutChecklist", data: { items: snapshot.workoutChecklist } },
