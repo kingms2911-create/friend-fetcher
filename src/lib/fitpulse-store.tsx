@@ -529,7 +529,9 @@ const StoreContext = createContext<Ctx | null>(null);
 const KEY = "koolfit-state-v2";
 const LEGACY_KEY = "fitpulse-state-v1";
 
-/** Guarantees the built-in demo accounts (and their gym) always exist locally. */
+/** Guarantees the built-in demo accounts always exist locally. Gym rows are
+ *  never fabricated here — the gym name/code shown in the UI always comes from
+ *  the database via the cloud snapshot. */
 function ensureDemoAccounts(users: User[], gyms: Gym[]): { users: User[]; gyms: Gym[] } {
   const nextUsers = [...users];
   for (const demo of DEMO_ACCOUNTS) {
@@ -549,18 +551,7 @@ function ensureDemoAccounts(users: User[], gyms: Gym[]): { users: User[]; gyms: 
     else nextUsers[idx] = { ...nextUsers[idx]!, ...base, id: nextUsers[idx]!.id };
   }
 
-  const nextGyms = gyms.some((g) => g.id === DEMO_GYM_ID)
-    ? gyms
-    : [
-        ...gyms,
-        {
-          id: DEMO_GYM_ID, name: "MS Gym", slug: "ms-gym", code: normalizeGymCode("MS2026"),
-          ownerId: "u_demo_owner", plan: "Starter", mrr: 0, active: true, pricing: { ...DEFAULT_PRICING },
-          timings: "6:00 AM – 10:00 PM", address: "Demo Street",
-        } as Gym,
-      ];
-
-  return { users: nextUsers, gyms: nextGyms };
+  return { users: nextUsers, gyms };
 }
 
 /** Fill in fields added after a user's data was first persisted. */
