@@ -396,7 +396,8 @@ function seed(): State {
 
   return {
     users,
-    gyms: [{ id: gymId, name: "Pulse Strength Club", slug: "pulse-strength", code: "PULSE24", ownerId: "u_owner", plan: "Growth", mrr: 4820, active: true, pricing: { ...DEFAULT_PRICING }, ownerPhone: "+91 98200 44111", trainerPhone: "+91 98200 44222", ownerWhatsapp: "+91 98200 44111", trainerWhatsapp: "+91 98200 44222", timings: "Mon–Sat 5:30 AM – 10:30 PM · Sun 7 AM – 1 PM", address: "12 Marine Lines, Mumbai 400020" }],
+    // No hardcoded gym rows — gym name/code always come from the database snapshot.
+    gyms: [],
 
     requests: [
       { id: "r1", memberId: "u_member", gymId, goal: "Lean bulk — 8 week hypertrophy block", requestedAt: iso(today), status: "pending", workout: seedWorkout, diet: seedDiet },
