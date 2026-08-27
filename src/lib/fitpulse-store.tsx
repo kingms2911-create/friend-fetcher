@@ -554,7 +554,7 @@ function ensureDemoAccounts(users: User[], gyms: Gym[]): { users: User[]; gyms: 
     : [
         ...gyms,
         {
-          id: DEMO_GYM_ID, name: "Demo Fitness Studio", slug: "demo-fitness", code: normalizeGymCode("DEMO24"),
+          id: DEMO_GYM_ID, name: "MS Gym", slug: "ms-gym", code: normalizeGymCode("MS2026"),
           ownerId: "u_demo_owner", plan: "Starter", mrr: 0, active: true, pricing: { ...DEFAULT_PRICING },
           timings: "6:00 AM – 10:00 PM", address: "Demo Street",
         } as Gym,
