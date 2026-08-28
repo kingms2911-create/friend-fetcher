@@ -161,7 +161,7 @@ export async function cloudRecover(v: {
   email: string;
   phone: string;
   passwordHash: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string | undefined }> {
   try {
     const res = await callServer(() => cloudRecoverPassword({ data: v }));
     return { ok: res.ok, error: res.error || undefined };
@@ -171,7 +171,10 @@ export async function cloudRecover(v: {
 }
 
 /** Platform admin: change an account's email without touching any other data. */
-export async function cloudSetUserEmail(userId: string, email: string): Promise<{ ok: boolean; error?: string }> {
+export async function cloudSetUserEmail(
+  userId: string,
+  email: string,
+): Promise<{ ok: boolean; error?: string | undefined }> {
   const token = getSessionToken();
   if (!token) return { ok: false, error: "Please sign in again." };
   try {

@@ -195,7 +195,10 @@ function AccountEmailManager() {
     setBusy(true);
     const res = await changeUserEmail(userId, email);
     setBusy(false);
-    if (!res.ok) return toast.error(res.error ?? "Could not update the email");
+    if (!res.ok) {
+      toast.error(res.error ?? "Could not update the email");
+      return;
+    }
     toast.success("Email updated. All other account data is unchanged.");
     setEditingId(null);
   };

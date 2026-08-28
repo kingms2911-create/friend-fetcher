@@ -491,9 +491,9 @@ type Ctx = {
   createTrainer: (v: { name: string; email: string; password: string }) => { ok: boolean; error?: string };
   resetPassword: (password: string) => void;
   /** forgotten password: verified with the phone number on the account */
-  recoverPassword: (v: { email: string; phone: string; password: string }) => Promise<{ ok: boolean; error?: string }>;
+  recoverPassword: (v: { email: string; phone: string; password: string }) => Promise<{ ok: boolean; error?: string | undefined }>;
   /** super admin: change an account email without touching any other data */
-  changeUserEmail: (userId: string, email: string) => Promise<{ ok: boolean; error?: string }>;
+  changeUserEmail: (userId: string, email: string) => Promise<{ ok: boolean; error?: string | undefined }>;
   toggleAttendance: (memberId: string) => void;
   decideRequest: (id: string, status: "approved" | "rejected") => void;
   requestPlan: (goal: string, prefs?: DietPrefs) => void;
