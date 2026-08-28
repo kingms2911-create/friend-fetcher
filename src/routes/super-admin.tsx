@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Megaphone, Power } from "lucide-react";
+import { Mail, Megaphone, Power } from "lucide-react";
 import { AppShell, GlassCard } from "@/components/fitpulse/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StoreManager } from "@/components/fitpulse/StoreManager";
+import { toast } from "sonner";
 import { useStore, isMembershipExpired } from "@/lib/fitpulse-store";
 
 export const Route = createFileRoute("/super-admin")({
@@ -57,6 +58,8 @@ function SuperAdmin() {
       </div>
 
       <PlatformBroadcast onSend={broadcastPlatform} />
+
+      <AccountEmailManager />
 
       <StoreManager
         heading="Global affiliate products"
@@ -168,6 +171,109 @@ function PlatformBroadcast({ onSend }: { onSend: (title: string, body: string) =
         <Button type="submit">Send announcement</Button>
         {sent ? <p className="text-sm text-primary">Broadcast delivered to all accounts.</p> : null}
       </form>
+    </GlassCard>
+  );
+}
+
+/**
+ * Change the email address of any account. Only the email field is written —
+ * role, gym, password, plans and history stay exactly as they are.
+ */
+function AccountEmailManager() {
+  const { state, changeUserEmail } = useStore();
+  const [query, setQuery] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const q = query.trim().toLowerCase();
+  const matches = state.users
+    .filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    .slice(0, 8);
+
+  const save = async (userId: string) => {
+    setBusy(true);
+    const res = await changeUserEmail(userId, email);
+    setBusy(false);
+    if (!res.ok) return toast.error(res.error ?? "Could not update the email");
+    toast.success("Email updated. All other account data is unchanged.");
+    setEditingId(null);
+  };
+
+  return (
+    <GlassCard className="mt-6">
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
+          <Mail className="size-4" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold">Change account email</h2>
+          <p className="text-xs text-muted-foreground">
+            Updates the login email only — role, gym and all history are preserved.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <Label htmlFor="ae-search">Find an account</Label>
+        <Input
+          id="ae-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name or email"
+        />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {matches.map((u) => (
+          <div key={u.id} className="rounded-xl border border-border/60 bg-secondary p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{u.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {u.email} · {u.role.replace("_", " ")}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border/70 bg-secondary"
+                onClick={() => {
+                  setEditingId(editingId === u.id ? null : u.id);
+                  setEmail(u.email);
+                }}
+              >
+                {editingId === u.id ? "Cancel" : "Change email"}
+              </Button>
+            </div>
+            {editingId === u.id ? (
+              <form
+                className="mt-3 flex flex-wrap items-end gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void save(u.id);
+                }}
+              >
+                <div className="min-w-[220px] flex-1 space-y-2">
+                  <Label htmlFor={`ae-${u.id}`}>New email</Label>
+                  <Input
+                    id={`ae-${u.id}`}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "Saving…" : "Save email"}
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        ))}
+        {matches.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No accounts match that search.</p>
+        ) : null}
+      </div>
     </GlassCard>
   );
 }
