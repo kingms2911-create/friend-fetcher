@@ -37,6 +37,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [forgot, setForgot] = useState(false);
   // Until React hydrates, a click would trigger a native form GET (page reload) instead of sign-in.
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
@@ -130,6 +131,13 @@ function LoginPage() {
           </div>
 
           <div className="mt-4 flex flex-col gap-2 text-center text-sm">
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => setForgot((v) => !v)}
+            >
+              Forgot password?
+            </button>
             <Link to="/signup" className="text-primary hover:underline">
               Create account (Gym Owner or Member)
             </Link>
@@ -149,8 +157,73 @@ function LoginPage() {
           </div>
 
         </form>
+
+        {forgot ? <ForgotPassword onDone={() => setForgot(false)} /> : null}
       </div>
 
     </div>
+  );
+}
+
+/**
+ * Password recovery without email delivery: the account is verified against
+ * the phone number registered on the profile before a new password is set.
+ */
+function ForgotPassword({ onDone }: { onDone: () => void }) {
+  const { recoverPassword } = useStore();
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !phone.trim()) return setError("Enter your email and registered phone number");
+    if (password.length < 6) return setError("Password must be at least 6 characters");
+    if (password !== confirm) return setError("Passwords do not match");
+    setError("");
+    setBusy(true);
+    const res = await recoverPassword({ email, phone, password });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error ?? "Could not reset your password");
+      toast.error(res.error ?? "Could not reset your password");
+      return;
+    }
+    toast.success("Password updated. You can sign in now.");
+    onDone();
+  };
+
+  return (
+    <form className="glass mt-4 rounded-3xl p-6" onSubmit={(e) => void submit(e)}>
+      <h2 className="text-base font-semibold">Reset your password</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Confirm the phone number registered on your account to set a new password.
+      </p>
+      <div className="mt-4 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="fp-email">Email</Label>
+          <Input id="fp-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@gym.com" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="fp-phone">Registered phone</Label>
+          <Input id="fp-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98xxxxxx90" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="fp-pass">New password</Label>
+          <Input id="fp-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="fp-confirm">Confirm new password</Label>
+          <Input id="fp-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Button type="submit" className="h-10 w-full" disabled={busy}>
+          {busy ? "Updating…" : "Update password"}
+        </Button>
+      </div>
+    </form>
   );
 }
