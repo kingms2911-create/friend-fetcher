@@ -2,7 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { buildPlan } from "./diet-engine";
 import { hashPassword } from "./hash";
-import { clearSession, cloudSignIn, loadCloudSnapshot, saveCloudSnapshot } from "./cloud-sync";
+import {
+  clearSession,
+  cloudRecover,
+  cloudSetUserEmail,
+  cloudSignIn,
+  loadCloudSnapshot,
+  saveCloudSnapshot,
+} from "./cloud-sync";
 
 export type Role = "super_admin" | "gym_owner" | "trainer" | "member";
 
@@ -483,6 +490,10 @@ type Ctx = {
   createMember: (v: { name: string; email: string; phone: string }) => { ok: boolean; error?: string };
   createTrainer: (v: { name: string; email: string; password: string }) => { ok: boolean; error?: string };
   resetPassword: (password: string) => void;
+  /** forgotten password: verified with the phone number on the account */
+  recoverPassword: (v: { email: string; phone: string; password: string }) => Promise<{ ok: boolean; error?: string }>;
+  /** super admin: change an account email without touching any other data */
+  changeUserEmail: (userId: string, email: string) => Promise<{ ok: boolean; error?: string }>;
   toggleAttendance: (memberId: string) => void;
   decideRequest: (id: string, status: "approved" | "rejected") => void;
   requestPlan: (goal: string, prefs?: DietPrefs) => void;
@@ -1001,6 +1012,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const recoverPassword = useCallback<Ctx["recoverPassword"]>(async (v) => {
+    const mail = v.email.trim().toLowerCase();
+    const hash = hashPassword(v.password);
+    const res = await cloudRecover({ email: v.email.trim(), phone: v.phone, passwordHash: hash });
+    if (!res.ok) return res;
+    setState((s) => ({
+      ...s,
+      users: s.users.map((u) =>
+        u.email.trim().toLowerCase() === mail ? { ...u, password: hash, mustResetPassword: false } : u,
+      ),
+    }));
+    return { ok: true };
+  }, []);
+
+  const changeUserEmail = useCallback<Ctx["changeUserEmail"]>(async (userId, email) => {
+    const next = email.trim().toLowerCase();
+    const res = await cloudSetUserEmail(userId, next);
+    if (!res.ok) return res;
+    // only the email field changes — every other value stays untouched
+    setState((s) => ({ ...s, users: s.users.map((u) => (u.id === userId ? { ...u, email: next } : u)) }));
+    return { ok: true };
+  }, []);
+
   const toggleAttendance = useCallback((memberId: string) => {
     setState((s) => ({
       ...s,
@@ -1388,8 +1422,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
-    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
+    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
+    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
   );
 
 
