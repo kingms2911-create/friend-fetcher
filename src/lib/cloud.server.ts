@@ -267,3 +267,73 @@ export async function writeSnapshot(token: string, snapshot: CloudSnapshot): Pro
 
   return true;
 }
+
+const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
+
+/**
+ * Self-service password recovery. The account is identified by email and
+ * verified against the phone number registered on the profile, so a stranger
+ * who only knows someone's email cannot take the account over.
+ */
+export async function recoverPassword(input: {
+  email: string;
+  phone: string;
+  passwordHash: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const generic = {
+    ok: false,
+    error: "We couldn't verify those details. Please contact your gym for help.",
+  };
+  const email = input.email.trim().toLowerCase();
+  if (!email || !input.passwordHash) return generic;
+
+  const db = await admin();
+  const { data } = await db.from("app_users").select("id,data").ilike("email", email).limit(1);
+  const row = (data ?? [])[0];
+  if (!row) return generic;
+
+  const stored = digits((row.data as AnyRec | null)?.["phone"]).slice(-10);
+  const given = digits(input.phone).slice(-10);
+  if (stored.length < 8 || stored !== given) return generic;
+
+  const nextData = { ...((row.data as AnyRec) ?? {}), password: "", mustResetPassword: false };
+  const { error } = await db
+    .from("app_users")
+    .update({ password_hash: input.passwordHash, data: nextData, updated_at: new Date().toISOString() })
+    .eq("id", row.id);
+  if (error) return { ok: false, error: "Could not update the password. Please try again." };
+  return { ok: true };
+}
+
+/**
+ * Platform-admin only: change an account's email address, leaving every other
+ * field (role, gym, password, plans, logs…) exactly as it is.
+ */
+export async function changeUserEmail(
+  token: string,
+  userId: string,
+  email: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const callerId = verifyToken(token);
+  if (!callerId) return { ok: false, error: "Your session expired. Please sign in again." };
+
+  const db = await admin();
+  const { data: callerRows } = await db.from("app_users").select("role").eq("id", callerId).limit(1);
+  if (String((callerRows ?? [])[0]?.role ?? "") !== "super_admin") {
+    return { ok: false, error: "Only platform admins can change an account email." };
+  }
+
+  const next = email.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) return { ok: false, error: "Enter a valid email address." };
+
+  const { data: taken } = await db.from("app_users").select("id").ilike("email", next).limit(1);
+  const clash = (taken ?? [])[0];
+  if (clash && String(clash.id) !== userId) return { ok: false, error: "That email is already in use." };
+
+  const { error } = await db
+    .from("app_users")
+    .update({ email: next, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) return { ok: false, error: "Could not update the email. Please try again." };
+  return { ok: true };
+}

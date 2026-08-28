@@ -38,3 +38,27 @@ export const cloudSave = createServerFn({ method: "POST" })
     if (!data.snapshot) return false;
     return writeSnapshot(data.token, JSON.parse(data.snapshot));
   });
+
+export const cloudRecoverPassword = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; phone: string; passwordHash: string }) => ({
+    email: String(data?.email ?? "").slice(0, 200),
+    phone: String(data?.phone ?? "").slice(0, 40),
+    passwordHash: String(data?.passwordHash ?? "").slice(0, 200),
+  }))
+  .handler(async ({ data }) => {
+    const { recoverPassword } = await import("./cloud.server");
+    const res = await recoverPassword(data);
+    return { ok: res.ok, error: res.error ?? "" };
+  });
+
+export const cloudChangeUserEmail = createServerFn({ method: "POST" })
+  .inputValidator((data: { token: string; userId: string; email: string }) => ({
+    token: String(data?.token ?? "").slice(0, 400),
+    userId: String(data?.userId ?? "").slice(0, 80),
+    email: String(data?.email ?? "").slice(0, 200),
+  }))
+  .handler(async ({ data }) => {
+    const { changeUserEmail } = await import("./cloud.server");
+    const res = await changeUserEmail(data.token, data.userId, data.email);
+    return { ok: res.ok, error: res.error ?? "" };
+  });
