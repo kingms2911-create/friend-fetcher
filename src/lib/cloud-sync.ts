@@ -5,7 +5,13 @@
  * through authenticated server functions, so app data (accounts, health
  * reports, logs, leads…) is never exposed to anonymous visitors.
  */
-import { cloudAuthenticate, cloudLoad, cloudSave } from "./cloud.functions";
+import {
+  cloudAuthenticate,
+  cloudChangeUserEmail,
+  cloudLoad,
+  cloudRecoverPassword,
+  cloudSave,
+} from "./cloud.functions";
 
 type AnyRec = Record<string, unknown>;
 
@@ -147,5 +153,31 @@ export async function saveCloudSnapshot(snapshot: CloudSnapshot): Promise<void> 
     await cloudSave({ data: { token, snapshot: JSON.stringify(snapshot) } });
   } catch {
     /* offline — local cache keeps the app usable */
+  }
+}
+
+/** Verify identity (email + registered phone) and set a new password. */
+export async function cloudRecover(v: {
+  email: string;
+  phone: string;
+  passwordHash: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await callServer(() => cloudRecoverPassword({ data: v }));
+    return { ok: res.ok, error: res.error || undefined };
+  } catch (error) {
+    return { ok: false, error: describeNetworkError(error) };
+  }
+}
+
+/** Platform admin: change an account's email without touching any other data. */
+export async function cloudSetUserEmail(userId: string, email: string): Promise<{ ok: boolean; error?: string }> {
+  const token = getSessionToken();
+  if (!token) return { ok: false, error: "Please sign in again." };
+  try {
+    const res = await callServer(() => cloudChangeUserEmail({ data: { token, userId, email } }));
+    return { ok: res.ok, error: res.error || undefined };
+  } catch (error) {
+    return { ok: false, error: describeNetworkError(error) };
   }
 }
