@@ -29,9 +29,9 @@ function SuperAdmin() {
 
   const members = state.users.filter((u) => u.role === "member");
   const activeMembers = members.filter((m) => !isMembershipExpired(m));
-  const platformRevenue = members
-    .filter((m) => m.paymentStatus !== "unpaid")
-    .reduce((sum, m) => sum + (m.subscription?.amount ?? 0), 0);
+  // Platform revenue = flat platform fee of ₹10 per active member (not member plan amounts).
+  const PLATFORM_FEE_PER_MEMBER = 10;
+  const platformRevenue = activeMembers.length * PLATFORM_FEE_PER_MEMBER;
   const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   const activeGyms = state.gyms.filter((g) => g.active !== false).length;
 
