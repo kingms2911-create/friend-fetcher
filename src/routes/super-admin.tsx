@@ -53,7 +53,7 @@ function SuperAdmin() {
         <GlassCard>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Total platform revenue</p>
           <p className="mt-2 text-3xl font-semibold">{inr(platformRevenue)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{state.requests.length} plan requests</p>
+          <p className="mt-1 text-xs text-muted-foreground">₹{PLATFORM_FEE_PER_MEMBER} × {activeMembers.length} active members</p>
         </GlassCard>
       </div>
 
