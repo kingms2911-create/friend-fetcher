@@ -86,7 +86,7 @@ function SignupPage() {
             </span>
             <p className="mt-3 text-sm font-semibold">Members join with a gym code</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ask your gym for its code, then pick a plan and pay online or at the front desk.
+              Ask your gym for its code, then pick a plan and pay in cash at the front desk.
             </p>
             <Button className="mt-4 h-11 w-full" onClick={() => void navigate({ to: "/join" })}>
               Continue as member

@@ -209,12 +209,9 @@ function MemberPortal() {
             <p className="text-xs text-muted-foreground">
               {currentUser?.subscription?.expiryDate
                 ? `Valid until ${new Date(currentUser.subscription.expiryDate).toLocaleDateString("en-IN")}`
-                : "Pay online to activate your membership"}
+                : "Pay at the gym front desk to activate your membership"}
             </p>
           </div>
-          <Button asChild variant="outline" className="border-border/70 bg-secondary">
-            <Link to="/checkout">Renew online</Link>
-          </Button>
           <Button
             variant="outline"
             className="border-chart-3/50 bg-chart-3/10 text-chart-3"
