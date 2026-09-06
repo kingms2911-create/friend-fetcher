@@ -91,7 +91,7 @@ export type Subscription = {
   expiryDate?: string;
 };
 
-export type MemberStatus = "active" | "pending_approval";
+export type MemberStatus = "active" | "pending_approval" | "rejected";
 export type PaymentStatus = "paid" | "unpaid";
 export type PaymentMethod = "online" | "gym";
 
@@ -180,6 +180,18 @@ export type Product = {
 
 /** Gym codes compare case-insensitively and ignore surrounding whitespace. */
 export const normalizeGymCode = (code: string) => code.replace(/\s+/g, "").toUpperCase();
+
+/** Gym owners must be approved by the super admin before their panel unlocks. */
+export function isOwnerPendingApproval(user: User | null): boolean {
+  if (!user || user.role !== "gym_owner") return false;
+  return user.status === "pending_approval";
+}
+
+/** Super admin rejected this gym owner's registration. */
+export function isOwnerRejected(user: User | null): boolean {
+  if (!user || user.role !== "gym_owner") return false;
+  return user.status === "rejected";
+}
 
 /** Members who chose "Pay at Gym" wait for owner approval before any access. */
 export function isPendingApproval(user: User | null): boolean {
@@ -509,6 +521,8 @@ type Ctx = {
   requestRenewal: () => void;
   approveRenewal: (memberId: string) => void;
   setMemberActive: (memberId: string, active: boolean) => void;
+  /** super admin decides on a gym owner registration */
+  decideGymOwner: (ownerId: string, decision: "approved" | "rejected") => void;
   assignPlan: (memberId: string, plan: { goal: string; workout: PlanExercise[]; diet: PlanMeal[] }) => void;
   addLead: (v: { name: string; phone: string; note: string }) => void;
   setLeadStatus: (id: string, status: LeadStatus) => void;
@@ -826,7 +840,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return s;
       }
       const gym: Gym = { id: gymId, name: v.gymName, slug: v.slug, code: normalizeGymCode(v.slug.slice(0, 5) + "24"), ownerId: id, plan: "Starter", mrr: 0, pricing: { ...DEFAULT_PRICING }, ownerPhone: v.phone ?? "", timings: v.timings ?? "6:00 AM – 10:00 PM", address: v.address ?? "" };
-      const owner: User = { id, name: v.ownerName, email: v.email, phone: v.phone, password: hash, role: "gym_owner", gymId, ownerCreated: false, mustResetPassword: false, joinedAt: iso(new Date()) };
+      const owner: User = { id, name: v.ownerName, email: v.email, phone: v.phone, password: hash, role: "gym_owner", gymId, ownerCreated: false, mustResetPassword: false, joinedAt: iso(new Date()), status: "pending_approval" };
       return { ...s, gyms: [...s.gyms, gym], users: [...s.users, owner], currentUserId: id };
     });
     return res;
@@ -1187,6 +1201,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [activate],
   );
 
+  const decideGymOwner = useCallback((ownerId: string, decision: "approved" | "rejected") => {
+    setState((s) =>
+      pushNote(
+        {
+          ...s,
+          users: s.users.map((u) =>
+            u.id === ownerId && u.role === "gym_owner"
+              ? { ...u, status: decision === "approved" ? ("active" as const) : ("rejected" as const) }
+              : u,
+          ),
+        },
+        [ownerId],
+        decision === "approved" ? "Account approved" : "Account rejected",
+        decision === "approved"
+          ? "Your gym owner account has been approved. You can now access your panel."
+          : "Your gym owner account was rejected. Please contact support.",
+      ),
+    );
+  }, []);
+
   const setMemberActive = useCallback<Ctx["setMemberActive"]>((memberId, active) => {
     setState((s) => ({
       ...s,
@@ -1422,8 +1456,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
-    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
+    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
+    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
   );
 
 

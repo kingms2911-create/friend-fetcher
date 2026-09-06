@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as GymOwnerRouteImport } from './routes/gym-owner'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
@@ -32,11 +31,6 @@ import { Route as TrainerPortalRouteImport } from './routes/trainer-portal'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutRoute = CheckoutRouteImport.update({
-  id: '/checkout',
-  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GymOwnerRoute = GymOwnerRouteImport.update({
@@ -127,7 +121,6 @@ const TrainerPortalRoute = TrainerPortalRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/gym-owner': typeof GymOwnerRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -148,7 +141,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/gym-owner': typeof GymOwnerRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -170,7 +162,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/checkout': typeof CheckoutRoute
   '/gym-owner': typeof GymOwnerRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
@@ -193,7 +184,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/checkout'
     | '/gym-owner'
     | '/join'
     | '/login'
@@ -214,7 +204,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/checkout'
     | '/gym-owner'
     | '/join'
     | '/login'
@@ -235,7 +224,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/checkout'
     | '/gym-owner'
     | '/join'
     | '/login'
@@ -257,7 +245,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CheckoutRoute: typeof CheckoutRoute
   GymOwnerRoute: typeof GymOwnerRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
@@ -284,13 +271,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout': {
-      id: '/checkout'
-      path: '/checkout'
-      fullPath: '/checkout'
-      preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gym-owner': {
@@ -417,7 +397,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CheckoutRoute: CheckoutRoute,
   GymOwnerRoute: GymOwnerRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
