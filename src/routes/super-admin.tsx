@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, Megaphone, Power } from "lucide-react";
+import { Check, Mail, Megaphone, Power, X } from "lucide-react";
 import { AppShell, GlassCard } from "@/components/fitpulse/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,9 @@ export const Route = createFileRoute("/super-admin")({
 });
 
 function SuperAdmin() {
-  const { state, setGymActive, broadcastPlatform, addProduct, removeProduct } = useStore();
+  const { state, setGymActive, broadcastPlatform, addProduct, removeProduct, decideGymOwner } = useStore();
+
+  const pendingOwners = state.users.filter((u) => u.role === "gym_owner" && u.status === "pending_approval");
 
   const members = state.users.filter((u) => u.role === "member");
   const activeMembers = members.filter((m) => !isMembershipExpired(m));
@@ -56,6 +58,59 @@ function SuperAdmin() {
           <p className="mt-1 text-xs text-muted-foreground">₹{PLATFORM_FEE_PER_MEMBER} × {activeMembers.length} active members</p>
         </GlassCard>
       </div>
+
+      <GlassCard className="mt-6">
+        <h2 className="text-lg font-semibold">Gym owner approvals</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          New gym owner registrations stay locked out until you approve them.
+        </p>
+        <div className="mt-4 space-y-3">
+          {pendingOwners.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No pending registrations right now.</p>
+          ) : (
+            pendingOwners.map((o) => {
+              const gym = state.gyms.find((g) => g.id === o.gymId);
+              return (
+                <div
+                  key={o.id}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-secondary p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{o.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {o.email}
+                      {gym ? ` · ${gym.name} (code ${gym.code})` : ""}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-chart-3/15 px-2.5 py-1 text-xs font-medium text-chart-3">
+                    Pending approval
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      decideGymOwner(o.id, "approved");
+                      toast.success(`${o.name} approved`);
+                    }}
+                  >
+                    <Check className="size-4" /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/50 bg-destructive/10 text-destructive"
+                    onClick={() => {
+                      decideGymOwner(o.id, "rejected");
+                      toast.success(`${o.name} rejected`);
+                    }}
+                  >
+                    <X className="size-4" /> Reject
+                  </Button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </GlassCard>
 
       <PlatformBroadcast onSend={broadcastPlatform} />
 
