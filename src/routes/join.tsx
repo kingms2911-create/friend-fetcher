@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { KeyRound, CreditCard, Building2, Loader2, Clock } from "lucide-react";
+import { KeyRound, Building2, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,7 @@ import {
   DEFAULT_PRICING,
   planLabel,
   normalizeGymCode,
-  type PaymentMethod,
 } from "@/lib/fitpulse-store";
-import { openRazorpayCheckout } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/join")({
   head: () => ({
@@ -21,12 +19,12 @@ export const Route = createFileRoute("/join")({
       {
         name: "description",
         content:
-          "Members: enter your gym code, pick a plan and either pay online with Razorpay or pay at the gym front desk.",
+          "Members: enter your gym code, pick a plan and pay in cash at the gym front desk.",
       },
       { property: "og:title", content: "Join your gym with a code — Kool Fit AI" },
       {
         property: "og:description",
-        content: "Sign up as a member with your gym's code, then pay online or at the front desk.",
+        content: "Sign up as a member with your gym's code, then pay in cash at the front desk.",
       },
     ],
   }),
@@ -34,12 +32,12 @@ export const Route = createFileRoute("/join")({
 });
 
 function JoinMember() {
-  const { state, joinAsMember, confirmOnlinePayment } = useStore();
+  const { state, joinAsMember } = useStore();
   const navigate = useNavigate();
   const [form, setForm] = useState({ code: "", name: "", email: "", phone: "", password: "" });
   const [months, setMonths] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<PaymentMethod | null>(null);
+  const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -62,37 +60,16 @@ function JoinMember() {
     return true;
   };
 
-  const handleChoice = async (method: PaymentMethod) => {
+  const handleJoin = async () => {
     if (busy || !validate()) return;
-    setBusy(method);
+    setBusy(true);
 
-    const res = await joinAsMember({ ...form, paymentMethod: method, months });
+    const res = await joinAsMember({ ...form, paymentMethod: "gym", months });
+    setBusy(false);
     if (!res.ok || !res.userId) {
-      setBusy(null);
       return setError(res.error ?? "Could not join gym");
     }
-    const memberId = res.userId;
-
-    if (method === "gym") {
-      setBusy(null);
-      setPending(true);
-      return;
-    }
-
-    await openRazorpayCheckout({
-      amountInRupees: price,
-      description: planLabel(months),
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      onDismiss: () => setBusy(null),
-      onSuccess: () => {
-        // Payment verified — activate and auto-approve the member.
-        confirmOnlinePayment(memberId, months);
-        setBusy(null);
-        void navigate({ to: "/member-portal" });
-      },
-    });
+    setPending(true);
   };
 
   if (pending) {
@@ -129,7 +106,7 @@ function JoinMember() {
         </span>
         <h1 className="mt-4 text-2xl font-semibold">Join as member</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter your gym code, pick a plan, then choose how you want to pay. Try code{" "}
+          Enter your gym code and pick a plan. Payment is made in cash at the gym front desk. Try code{" "}
           <span className="font-medium text-primary">PULSE24</span>.
         </p>
 
@@ -187,24 +164,12 @@ function JoinMember() {
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <div className="space-y-2 pt-1">
-            <Button className="h-11 w-full" disabled={busy !== null} onClick={() => void handleChoice("online")}>
-              {busy === "online" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <CreditCard className="size-4" />
-              )}
-              Pay Online · ₹{price.toLocaleString("en-IN")}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 w-full border-border/70 bg-secondary"
-              disabled={busy !== null}
-              onClick={() => void handleChoice("gym")}
-            >
-              <Building2 className="size-4" /> Pay at Gym
+            <Button className="h-11 w-full" disabled={busy} onClick={() => void handleJoin()}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Building2 className="size-4" />}
+              Request to join · Pay ₹{price.toLocaleString("en-IN")} at gym
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              Paying at the gym keeps your account pending until the owner confirms the cash payment.
+              Your account stays pending until the owner confirms the cash payment at the front desk.
             </p>
           </div>
 

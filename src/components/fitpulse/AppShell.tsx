@@ -3,7 +3,7 @@ import { Dumbbell, LogOut, Lock, Clock } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useStore, roleHome, isMembershipExpired, isPendingApproval, type Role } from "@/lib/fitpulse-store";
+import { useStore, roleHome, isMembershipExpired, isPendingApproval, isOwnerPendingApproval, isOwnerRejected, type Role } from "@/lib/fitpulse-store";
 
 import { PasswordResetModal } from "./PasswordResetModal";
 import { NotificationBell } from "./NotificationBell";
@@ -52,6 +52,36 @@ export function AppShell({
     );
   }
 
+  // Gym owners stay locked out until the super admin approves the account.
+  if (isOwnerPendingApproval(currentUser) || isOwnerRejected(currentUser)) {
+    const rejected = isOwnerRejected(currentUser);
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="glass-strong w-full max-w-md rounded-3xl p-8 text-center">
+          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-chart-3/15 text-chart-3">
+            <Clock className="size-6" />
+          </span>
+          <h1 className="mt-4 text-2xl font-semibold">{rejected ? "Account rejected" : "Approval pending"}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {rejected
+              ? "Your gym owner account was rejected. Please contact support."
+              : "Your account is pending Super Admin approval. Please contact support."}
+          </p>
+          <Button
+            variant="ghost"
+            className="mt-6 w-full"
+            onClick={() => {
+              signOut();
+              void navigate({ to: "/login", replace: true });
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Members who chose "Pay at Gym" stay locked out until the owner approves.
   if (isPendingApproval(currentUser)) {
     return (
@@ -94,17 +124,17 @@ export function AppShell({
           </span>
           <h1 className="mt-4 text-2xl font-semibold">Membership Expired</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Renew Now to Continue. Workout plans, diet plans and your dashboard stay locked until payment is
-            completed.
+            Renew at the gym front desk to continue. Workout plans, diet plans and your dashboard stay locked
+            until the owner marks your cash payment as received.
           </p>
           {end ? (
             <p className="mt-2 text-xs text-muted-foreground">
               Expired on {new Date(end).toLocaleDateString("en-IN")}
             </p>
           ) : null}
-          <Button className="mt-6 h-11 w-full" onClick={() => void navigate({ to: "/checkout" })}>
-            Renew Now
-          </Button>
+          <p className="mt-4 rounded-xl border border-border/60 bg-secondary p-3 text-xs text-muted-foreground">
+            Pay cash at {currentGym?.name ?? "your gym"} and your access unlocks as soon as it is marked paid.
+          </p>
           <Button
             variant="ghost"
             className="mt-2 w-full"
