@@ -549,6 +549,16 @@ type Ctx = {
   updateGymContacts: (v: GymContacts) => void;
   /** super admin: toggle a gym's platform subscription */
   setGymActive: (gymId: string, active: boolean) => void;
+  /** log a platform fee payment (owner UPI confirmation or super-admin override) */
+  recordGymPayment: (v: {
+    gymId: string;
+    kind: "monthly" | "annual";
+    period: string;
+    amount: number;
+    method: "upi" | "cash" | "manual";
+    note?: string;
+  }) => void;
+
   /** super admin: broadcast to every account on the platform */
   broadcastPlatform: (title: string, body: string) => void;
   setCalorieTarget: (kcal: number) => void;
