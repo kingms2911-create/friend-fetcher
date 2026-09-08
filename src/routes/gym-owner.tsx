@@ -284,7 +284,7 @@ function OwnerDashboard() {
   );
 }
 
-function PricingSettings({ pricing, onSave }: { pricing: Pricing; onSave: (p: Pricing) => void }) {
+function PricingSettings({ pricing, onSave, disabled = false }: { pricing: Pricing; onSave: (p: Pricing) => void; disabled?: boolean }) {
   const [form, setForm] = useState(pricing);
   const [saved, setSaved] = useState(false);
 
@@ -332,7 +332,7 @@ function PricingSettings({ pricing, onSave }: { pricing: Pricing; onSave: (p: Pr
           </div>
         ))}
         <div className="sm:col-span-3 flex flex-wrap items-center gap-3">
-          <Button type="submit">Save pricing</Button>
+          <Button type="submit" disabled={disabled}>Save pricing</Button>
           {saved ? <span className="text-sm text-primary">Pricing updated for your gym.</span> : null}
         </div>
       </form>
@@ -466,7 +466,7 @@ function GymCodeCard({ code }: { code: string }) {
 }
 
 /** Broadcast announcements to every member of the gym as in-app notifications. */
-function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) => void }) {
+function AnnouncementCard({ onSend, disabled = false }: { onSend: (title: string, body: string) => void; disabled?: boolean }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sent, setSent] = useState(false);
@@ -493,7 +493,7 @@ function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) =>
       >
         <Input value={title} onChange={(e) => { setSent(false); setTitle(e.target.value); }} placeholder="Title (e.g. Holiday timings)" />
         <Input value={body} onChange={(e) => { setSent(false); setBody(e.target.value); }} placeholder="Message to all members" />
-        <Button type="submit">Broadcast</Button>
+        <Button type="submit" disabled={disabled}>Broadcast</Button>
       </form>
       {sent ? <p className="mt-3 text-sm text-primary">Announcement sent to all members.</p> : null}
     </GlassCard>
@@ -504,9 +504,11 @@ function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) =>
 function ContactSettings({
   contacts,
   onSave,
+  disabled = false,
 }: {
   contacts: GymContacts;
   onSave: (v: GymContacts) => void;
+  disabled?: boolean;
 }) {
   const [form, setForm] = useState<GymContacts>(contacts);
   const [saved, setSaved] = useState(false);
