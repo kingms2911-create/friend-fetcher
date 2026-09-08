@@ -1355,6 +1355,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, gyms: s.gyms.map((g) => (g.id === gymId ? { ...g, active } : g)) }));
   }, []);
 
+  const recordGymPayment = useCallback<Ctx["recordGymPayment"]>((v) => {
+    setState((s) => {
+      const payment: BillingPayment = {
+        id: `pay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        kind: v.kind,
+        period: v.period,
+        amount: v.amount,
+        method: v.method,
+        paidAt: new Date().toISOString(),
+        ...(v.note ? { note: v.note } : {}),
+        ...(s.currentUserId ? { recordedBy: s.currentUserId } : {}),
+      };
+      const gym = s.gyms.find((g) => g.id === v.gymId);
+      const next: State = {
+        ...s,
+        gyms: s.gyms.map((g) =>
+          g.id === v.gymId
+            ? {
+                ...g,
+                activatedAt: g.activatedAt ?? new Date().toISOString(),
+                payments: [payment, ...(g.payments ?? [])].filter(
+                  (p, i, all) => i === all.findIndex((x) => x.kind === p.kind && x.period === p.period),
+                ),
+              }
+            : g,
+        ),
+      };
+      if (!gym?.ownerId) return next;
+      return pushNote(
+        next,
+        [gym.ownerId],
+        v.kind === "monthly" ? "Monthly fee received" : "Website renewal received",
+        `₹${v.amount.toLocaleString("en-IN")} recorded for ${v.period}.`,
+      );
+    });
+  }, []);
+
+
   const broadcastPlatform = useCallback<Ctx["broadcastPlatform"]>((title, body) => {
     setState((s) =>
       pushNote(
