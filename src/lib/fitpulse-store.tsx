@@ -867,7 +867,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         res = { ok: false, error: "An account with that email already exists" };
         return s;
       }
-      const gym: Gym = { id: gymId, name: v.gymName, slug: v.slug, code: normalizeGymCode(v.slug.slice(0, 5) + "24"), ownerId: id, plan: "Starter", mrr: 0, pricing: { ...DEFAULT_PRICING }, ownerPhone: v.phone ?? "", timings: v.timings ?? "6:00 AM – 10:00 PM", address: v.address ?? "" };
+      const gym: Gym = { id: gymId, name: v.gymName, slug: v.slug, code: normalizeGymCode(v.slug.slice(0, 5) + "24"), ownerId: id, plan: "Starter", mrr: 0, pricing: { ...DEFAULT_PRICING }, ownerPhone: v.phone ?? "", timings: v.timings ?? "6:00 AM – 10:00 PM", address: v.address ?? "", activatedAt: new Date().toISOString(), payments: [] };
       const owner: User = { id, name: v.ownerName, email: v.email, phone: v.phone, password: hash, role: "gym_owner", gymId, ownerCreated: false, mustResetPassword: false, joinedAt: iso(new Date()), status: "pending_approval" };
       return { ...s, gyms: [...s.gyms, gym], users: [...s.users, owner], currentUserId: id };
     });
