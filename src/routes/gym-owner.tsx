@@ -48,7 +48,7 @@ const statusStyles: Record<string, string> = {
 };
 
 function OwnerDashboard() {
-  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, rejectMember, refresh, approveRenewal, sendAnnouncement, updateGymContacts } =
+  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, rejectMember, refresh, approveRenewal, sendAnnouncement, updateGymContacts, recordGymPayment } =
     useStore();
 
   const [modal, setModal] = useState<null | "member" | "trainer">(null);
@@ -74,6 +74,10 @@ function OwnerDashboard() {
     0,
   );
 
+  // Platform billing: ₹2 per active member each month + ₹2,000 website renewal.
+  const bill = monthlyBill(currentGym, state.users);
+  const renewal = annualRenewal(currentGym, currentUser?.joinedAt);
+  const locked = bill.overdue;
 
   return (
     <AppShell
@@ -82,24 +86,44 @@ function OwnerDashboard() {
       subtitle={`Gym code ${currentGym?.code ?? "—"} · finances visible to you only`}
       nav={<OwnerTabs />}
     >
+      {locked ? (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/50 bg-destructive/10 px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-destructive">Payment Overdue</p>
+            <p className="text-xs text-muted-foreground">
+              Your {bill.periodLabel} fee of {inr(bill.amount)} is {bill.daysOverdue} day
+              {bill.daysOverdue === 1 ? "" : "s"} late. Editing is locked until it is cleared.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon={<TrendingUp className="size-4" />} label="MRR" value={`₹${mrr.toLocaleString("en-IN")}`} hint="Per-month value of active plans" />
         <Stat icon={<IndianRupee className="size-4" />} label="Total revenue" value={`₹${totalRevenue.toLocaleString("en-IN")}`} hint={`${paidMembers.length} paid membership${paidMembers.length === 1 ? "" : "s"}`} />
         <Stat icon={<Users className="size-4" />} label="Active members" value={String(members.length)} hint={`${trainers.length} trainers on staff`} />
       </div>
 
+      <BillingCard
+        gymId={currentGym?.id ?? ""}
+        bill={bill}
+        renewal={renewal}
+        onPaid={recordGymPayment}
+      />
+
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button onClick={() => setModal("member")}>
+        <Button disabled={locked} onClick={() => setModal("member")}>
           <UserPlus className="size-4" /> Add Member
         </Button>
-        <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => setModal("trainer")}>
+        <Button variant="outline" disabled={locked} className="border-border/70 bg-secondary" onClick={() => setModal("trainer")}>
           <ShieldCheck className="size-4" /> Add Trainer
         </Button>
       </div>
 
       <GymCodeCard code={currentGym?.code ?? "—"} />
 
-      <AnnouncementCard onSend={sendAnnouncement} />
+      <AnnouncementCard onSend={sendAnnouncement} disabled={locked} />
 
       <ContactSettings
         contacts={{
@@ -111,12 +135,16 @@ function OwnerDashboard() {
           address: currentGym?.address ?? "",
         }}
         onSave={updateGymContacts}
+        disabled={locked}
       />
 
       <PricingSettings
         pricing={currentGym?.pricing ?? DEFAULT_PRICING}
         onSave={updatePricing}
+        disabled={locked}
       />
+
+
 
 
       <GlassCard className="mt-6">
