@@ -50,6 +50,19 @@ export type Pricing = { m1: number; m2: number; m3: number };
 
 export const DEFAULT_PRICING: Pricing = { m1: 1500, m2: 2800, m3: 3900 };
 
+/** A platform fee payment logged against a gym (monthly usage or annual website). */
+export type BillingPayment = {
+  id: string;
+  kind: "monthly" | "annual";
+  /** "2026-09" for monthly, "annual-2027" for the website renewal */
+  period: string;
+  amount: number;
+  method: "upi" | "cash" | "manual";
+  paidAt: string;
+  note?: string;
+  recordedBy?: string;
+};
+
 export type Gym = {
   id: string;
   name: string;
@@ -68,7 +81,12 @@ export type Gym = {
   address?: string;
   /** platform subscription toggle controlled by the super admin */
   active?: boolean;
+  /** date the website went live — drives the annual renewal cycle */
+  activatedAt?: string;
+  /** platform fee payment history */
+  payments?: BillingPayment[];
 };
+
 
 /** Contact numbers the owner configures; members' quick actions bind to these. */
 export type GymContacts = {
