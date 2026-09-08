@@ -563,7 +563,7 @@ function ContactSettings({
         {field("timings", "Gym timings", "Mon–Sat 5:30 AM – 10:30 PM")}
         {field("address", "Gym address", "12 Marine Lines, Mumbai 400020")}
         <div className="sm:col-span-2 flex items-center gap-3">
-          <Button type="submit">Save contacts</Button>
+          <Button type="submit" disabled={disabled}>Save contacts</Button>
           {saved ? <span className="text-sm text-primary">Saved — members see these instantly.</span> : null}
         </div>
       </form>
@@ -571,3 +571,116 @@ function ContactSettings({
   );
 }
 
+
+/** Platform billing: ₹2 per active member per month + ₹2,000 annual website renewal. */
+function BillingCard({
+  gymId,
+  bill,
+  renewal,
+  onPaid,
+}: {
+  gymId: string;
+  bill: ReturnType<typeof monthlyBill>;
+  renewal: ReturnType<typeof annualRenewal>;
+  onPaid: (v: {
+    gymId: string;
+    kind: "monthly" | "annual";
+    period: string;
+    amount: number;
+    method: "upi" | "cash" | "manual";
+    note?: string;
+  }) => void;
+}) {
+  const [openedUpi, setOpenedUpi] = useState<null | "monthly" | "annual">(null);
+
+  const pay = (kind: "monthly" | "annual", amount: number, period: string) => {
+    window.location.href = upiPayUrl(amount, `Kool Fit AI ${kind} fee ${period}`);
+    setOpenedUpi(kind);
+  };
+
+  const confirm = (kind: "monthly" | "annual", amount: number, period: string) => {
+    if (!gymId) return;
+    onPaid({ gymId, kind, period, amount, method: "upi" });
+    setOpenedUpi(null);
+    toast.success("Payment recorded. Super Admin will verify it.");
+  };
+
+  return (
+    <GlassCard className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <CreditCard className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold">Pay Monthly Fee (₹{PLATFORM_FEE_PER_MEMBER}/Member)</h2>
+            <p className="text-xs text-muted-foreground">
+              {bill.periodLabel} · {bill.activeMembers} active member{bill.activeMembers === 1 ? "" : "s"} ×
+              ₹{PLATFORM_FEE_PER_MEMBER}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+            bill.overdue
+              ? "bg-destructive/15 text-destructive"
+              : bill.paid
+                ? "bg-primary/15 text-primary"
+                : "bg-chart-3/15 text-chart-3"
+          }`}
+        >
+          {bill.overdue ? "Payment Overdue" : bill.paid ? "Paid" : "Due"}
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-2xl font-semibold">{inr(bill.amount)}</p>
+          <p className="text-xs text-muted-foreground">
+            Due by {bill.dueDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} ·
+            UPI {PLATFORM_UPI_ID}
+          </p>
+        </div>
+        {bill.paid ? (
+          <span className="shrink-0 text-sm text-primary">Cleared for this month</span>
+        ) : (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay by UPI</Button>
+            {openedUpi === "monthly" ? (
+              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("monthly", bill.amount, bill.period)}>
+                I have paid
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <CalendarClock className="size-4 shrink-0 text-chart-3" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">Annual Website Renewal Fee ({inr(ANNUAL_WEBSITE_FEE)})</p>
+            <p className="text-xs text-muted-foreground">
+              Live since {renewal.activatedOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} ·
+              renews {renewal.dueOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+        {renewal.paid ? (
+          <span className="shrink-0 text-sm text-primary">Renewed</span>
+        ) : renewal.dueSoon ? (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Renew by UPI</Button>
+            {openedUpi === "annual" ? (
+              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("annual", renewal.amount, renewal.period)}>
+                I have paid
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <span className="shrink-0 text-xs text-muted-foreground">Not due yet</span>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
