@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Mail, Megaphone, Power, X } from "lucide-react";
+import { Check, IndianRupee, Mail, Megaphone, Power, X } from "lucide-react";
 import { AppShell, GlassCard } from "@/components/fitpulse/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { StoreManager } from "@/components/fitpulse/StoreManager";
 import { toast } from "sonner";
 import { useStore, isMembershipExpired } from "@/lib/fitpulse-store";
+import {
+  ANNUAL_WEBSITE_FEE,
+  PLATFORM_FEE_PER_MEMBER,
+  annualRenewal,
+  inr as money,
+  monthlyBill,
+  periodLabel,
+} from "@/lib/billing";
 
 export const Route = createFileRoute("/super-admin")({
   head: () => ({
@@ -111,6 +119,8 @@ function SuperAdmin() {
           )}
         </div>
       </GlassCard>
+
+      <GymBilling />
 
       <PlatformBroadcast onSend={broadcastPlatform} />
 
@@ -331,6 +341,122 @@ function AccountEmailManager() {
         {matches.length === 0 ? (
           <p className="text-sm text-muted-foreground">No accounts match that search.</p>
         ) : null}
+      </div>
+    </GlassCard>
+  );
+}
+
+/** Billing status + history for every onboarded gym, with a manual override. */
+function GymBilling() {
+  const { state, recordGymPayment } = useStore();
+
+  return (
+    <GlassCard className="mt-6">
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+          <IndianRupee className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold">Gym billing &amp; payments</h2>
+          <p className="text-xs text-muted-foreground">
+            ₹{PLATFORM_FEE_PER_MEMBER} per active member each month · {money(ANNUAL_WEBSITE_FEE)} website renewal
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {state.gyms.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No gyms onboarded yet.</p>
+        ) : (
+          state.gyms.map((g) => {
+            const owner = state.users.find((u) => u.id === g.ownerId);
+            const bill = monthlyBill(g, state.users);
+            const renewal = annualRenewal(g, owner?.joinedAt);
+            const history = (g.payments ?? []).slice(0, 4);
+            return (
+              <div key={g.id} className="rounded-xl border border-border/60 bg-secondary px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{g.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {bill.activeMembers} active · {bill.periodLabel} due {money(bill.amount)} · renewal{" "}
+                      {renewal.dueOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                      bill.overdue
+                        ? "bg-destructive/15 text-destructive"
+                        : bill.paid
+                          ? "bg-primary/15 text-primary"
+                          : "bg-chart-3/15 text-chart-3"
+                    }`}
+                  >
+                    {bill.overdue ? "Overdue" : bill.paid ? "Paid" : "Due"}
+                  </span>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={bill.paid}
+                      onClick={() => {
+                        recordGymPayment({
+                          gymId: g.id,
+                          kind: "monthly",
+                          period: bill.period,
+                          amount: bill.amount,
+                          method: "cash",
+                          note: "Marked paid by super admin",
+                        });
+                        toast.success(`${g.name}: ${bill.periodLabel} marked as paid`);
+                      }}
+                    >
+                      <Check className="size-4" /> Mark as Paid
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-border/70 bg-secondary"
+                      disabled={renewal.paid}
+                      onClick={() => {
+                        recordGymPayment({
+                          gymId: g.id,
+                          kind: "annual",
+                          period: renewal.period,
+                          amount: ANNUAL_WEBSITE_FEE,
+                          method: "manual",
+                          note: "Renewal logged by super admin",
+                        });
+                        toast.success(`${g.name}: website renewal logged`);
+                      }}
+                    >
+                      Mark renewal paid
+                    </Button>
+                  </div>
+                </div>
+
+                {history.length ? (
+                  <ul className="mt-3 space-y-1 border-t border-border/60 pt-3">
+                    {history.map((p) => (
+                      <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">
+                          {p.kind === "monthly" ? periodLabel(p.period) : `Website renewal ${p.period.replace("annual-", "")}`} ·{" "}
+                          {p.method}
+                        </span>
+                        <span className="shrink-0 text-foreground">
+                          {money(p.amount)} · {new Date(p.paidAt).toLocaleDateString("en-IN")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                    No payments recorded yet.
+                  </p>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </GlassCard>
   );

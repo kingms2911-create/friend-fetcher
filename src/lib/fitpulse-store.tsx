@@ -50,6 +50,19 @@ export type Pricing = { m1: number; m2: number; m3: number };
 
 export const DEFAULT_PRICING: Pricing = { m1: 1500, m2: 2800, m3: 3900 };
 
+/** A platform fee payment logged against a gym (monthly usage or annual website). */
+export type BillingPayment = {
+  id: string;
+  kind: "monthly" | "annual";
+  /** "2026-09" for monthly, "annual-2027" for the website renewal */
+  period: string;
+  amount: number;
+  method: "upi" | "cash" | "manual";
+  paidAt: string;
+  note?: string;
+  recordedBy?: string;
+};
+
 export type Gym = {
   id: string;
   name: string;
@@ -68,7 +81,12 @@ export type Gym = {
   address?: string;
   /** platform subscription toggle controlled by the super admin */
   active?: boolean;
+  /** date the website went live — drives the annual renewal cycle */
+  activatedAt?: string;
+  /** platform fee payment history */
+  payments?: BillingPayment[];
 };
+
 
 /** Contact numbers the owner configures; members' quick actions bind to these. */
 export type GymContacts = {
@@ -531,6 +549,16 @@ type Ctx = {
   updateGymContacts: (v: GymContacts) => void;
   /** super admin: toggle a gym's platform subscription */
   setGymActive: (gymId: string, active: boolean) => void;
+  /** log a platform fee payment (owner UPI confirmation or super-admin override) */
+  recordGymPayment: (v: {
+    gymId: string;
+    kind: "monthly" | "annual";
+    period: string;
+    amount: number;
+    method: "upi" | "cash" | "manual";
+    note?: string;
+  }) => void;
+
   /** super admin: broadcast to every account on the platform */
   broadcastPlatform: (title: string, body: string) => void;
   setCalorieTarget: (kcal: number) => void;
@@ -839,7 +867,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         res = { ok: false, error: "An account with that email already exists" };
         return s;
       }
-      const gym: Gym = { id: gymId, name: v.gymName, slug: v.slug, code: normalizeGymCode(v.slug.slice(0, 5) + "24"), ownerId: id, plan: "Starter", mrr: 0, pricing: { ...DEFAULT_PRICING }, ownerPhone: v.phone ?? "", timings: v.timings ?? "6:00 AM – 10:00 PM", address: v.address ?? "" };
+      const gym: Gym = { id: gymId, name: v.gymName, slug: v.slug, code: normalizeGymCode(v.slug.slice(0, 5) + "24"), ownerId: id, plan: "Starter", mrr: 0, pricing: { ...DEFAULT_PRICING }, ownerPhone: v.phone ?? "", timings: v.timings ?? "6:00 AM – 10:00 PM", address: v.address ?? "", activatedAt: new Date().toISOString(), payments: [] };
       const owner: User = { id, name: v.ownerName, email: v.email, phone: v.phone, password: hash, role: "gym_owner", gymId, ownerCreated: false, mustResetPassword: false, joinedAt: iso(new Date()), status: "pending_approval" };
       return { ...s, gyms: [...s.gyms, gym], users: [...s.users, owner], currentUserId: id };
     });
@@ -1327,6 +1355,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, gyms: s.gyms.map((g) => (g.id === gymId ? { ...g, active } : g)) }));
   }, []);
 
+  const recordGymPayment = useCallback<Ctx["recordGymPayment"]>((v) => {
+    setState((s) => {
+      const payment: BillingPayment = {
+        id: `pay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        kind: v.kind,
+        period: v.period,
+        amount: v.amount,
+        method: v.method,
+        paidAt: new Date().toISOString(),
+        ...(v.note ? { note: v.note } : {}),
+        ...(s.currentUserId ? { recordedBy: s.currentUserId } : {}),
+      };
+      const gym = s.gyms.find((g) => g.id === v.gymId);
+      const next: State = {
+        ...s,
+        gyms: s.gyms.map((g) =>
+          g.id === v.gymId
+            ? {
+                ...g,
+                activatedAt: g.activatedAt ?? new Date().toISOString(),
+                payments: [payment, ...(g.payments ?? [])].filter(
+                  (p, i, all) => i === all.findIndex((x) => x.kind === p.kind && x.period === p.period),
+                ),
+              }
+            : g,
+        ),
+      };
+      if (!gym?.ownerId) return next;
+      return pushNote(
+        next,
+        [gym.ownerId],
+        v.kind === "monthly" ? "Monthly fee received" : "Website renewal received",
+        `₹${v.amount.toLocaleString("en-IN")} recorded for ${v.period}.`,
+      );
+    });
+  }, []);
+
+
   const broadcastPlatform = useCallback<Ctx["broadcastPlatform"]>((title, body) => {
     setState((s) =>
       pushNote(
@@ -1456,8 +1522,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
-    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
+    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
+    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
   );
 
 

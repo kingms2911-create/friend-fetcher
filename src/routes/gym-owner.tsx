@@ -1,12 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { IndianRupee, TrendingUp, Users, UserPlus, ShieldCheck, X, Tag, Clock, Check, Megaphone, Phone } from "lucide-react";
+import { IndianRupee, TrendingUp, Users, UserPlus, ShieldCheck, X, Tag, Clock, Check, Megaphone, Phone, AlertTriangle, CreditCard, CalendarClock } from "lucide-react";
 import { AppShell, GlassCard } from "@/components/fitpulse/AppShell";
 import { OwnerTabs } from "@/components/fitpulse/Tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import {
+  ANNUAL_WEBSITE_FEE,
+  PLATFORM_FEE_PER_MEMBER,
+  PLATFORM_UPI_ID,
+  annualRenewal,
+  inr,
+  monthlyBill,
+  upiPayUrl,
+} from "@/lib/billing";
 import { useStore, DEFAULT_PASSWORD, DEFAULT_PRICING, planLabel, type Pricing, type GymContacts } from "@/lib/fitpulse-store";
+
 
 
 
@@ -37,7 +48,7 @@ const statusStyles: Record<string, string> = {
 };
 
 function OwnerDashboard() {
-  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, rejectMember, refresh, approveRenewal, sendAnnouncement, updateGymContacts } =
+  const { state, currentUser, currentGym, createMember, createTrainer, updatePricing, approveMemberPayment, rejectMember, refresh, approveRenewal, sendAnnouncement, updateGymContacts, recordGymPayment } =
     useStore();
 
   const [modal, setModal] = useState<null | "member" | "trainer">(null);
@@ -63,6 +74,10 @@ function OwnerDashboard() {
     0,
   );
 
+  // Platform billing: ₹2 per active member each month + ₹2,000 website renewal.
+  const bill = monthlyBill(currentGym, state.users);
+  const renewal = annualRenewal(currentGym, currentUser?.joinedAt);
+  const locked = bill.overdue;
 
   return (
     <AppShell
@@ -71,24 +86,44 @@ function OwnerDashboard() {
       subtitle={`Gym code ${currentGym?.code ?? "—"} · finances visible to you only`}
       nav={<OwnerTabs />}
     >
+      {locked ? (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/50 bg-destructive/10 px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-destructive">Payment Overdue</p>
+            <p className="text-xs text-muted-foreground">
+              Your {bill.periodLabel} fee of {inr(bill.amount)} is {bill.daysOverdue} day
+              {bill.daysOverdue === 1 ? "" : "s"} late. Editing is locked until it is cleared.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon={<TrendingUp className="size-4" />} label="MRR" value={`₹${mrr.toLocaleString("en-IN")}`} hint="Per-month value of active plans" />
         <Stat icon={<IndianRupee className="size-4" />} label="Total revenue" value={`₹${totalRevenue.toLocaleString("en-IN")}`} hint={`${paidMembers.length} paid membership${paidMembers.length === 1 ? "" : "s"}`} />
         <Stat icon={<Users className="size-4" />} label="Active members" value={String(members.length)} hint={`${trainers.length} trainers on staff`} />
       </div>
 
+      <BillingCard
+        gymId={currentGym?.id ?? ""}
+        bill={bill}
+        renewal={renewal}
+        onPaid={recordGymPayment}
+      />
+
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button onClick={() => setModal("member")}>
+        <Button disabled={locked} onClick={() => setModal("member")}>
           <UserPlus className="size-4" /> Add Member
         </Button>
-        <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => setModal("trainer")}>
+        <Button variant="outline" disabled={locked} className="border-border/70 bg-secondary" onClick={() => setModal("trainer")}>
           <ShieldCheck className="size-4" /> Add Trainer
         </Button>
       </div>
 
       <GymCodeCard code={currentGym?.code ?? "—"} />
 
-      <AnnouncementCard onSend={sendAnnouncement} />
+      <AnnouncementCard onSend={sendAnnouncement} disabled={locked} />
 
       <ContactSettings
         contacts={{
@@ -100,12 +135,16 @@ function OwnerDashboard() {
           address: currentGym?.address ?? "",
         }}
         onSave={updateGymContacts}
+        disabled={locked}
       />
 
       <PricingSettings
         pricing={currentGym?.pricing ?? DEFAULT_PRICING}
         onSave={updatePricing}
+        disabled={locked}
       />
+
+
 
 
       <GlassCard className="mt-6">
@@ -245,7 +284,7 @@ function OwnerDashboard() {
   );
 }
 
-function PricingSettings({ pricing, onSave }: { pricing: Pricing; onSave: (p: Pricing) => void }) {
+function PricingSettings({ pricing, onSave, disabled = false }: { pricing: Pricing; onSave: (p: Pricing) => void; disabled?: boolean }) {
   const [form, setForm] = useState(pricing);
   const [saved, setSaved] = useState(false);
 
@@ -293,7 +332,7 @@ function PricingSettings({ pricing, onSave }: { pricing: Pricing; onSave: (p: Pr
           </div>
         ))}
         <div className="sm:col-span-3 flex flex-wrap items-center gap-3">
-          <Button type="submit">Save pricing</Button>
+          <Button type="submit" disabled={disabled}>Save pricing</Button>
           {saved ? <span className="text-sm text-primary">Pricing updated for your gym.</span> : null}
         </div>
       </form>
@@ -427,7 +466,7 @@ function GymCodeCard({ code }: { code: string }) {
 }
 
 /** Broadcast announcements to every member of the gym as in-app notifications. */
-function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) => void }) {
+function AnnouncementCard({ onSend, disabled = false }: { onSend: (title: string, body: string) => void; disabled?: boolean }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sent, setSent] = useState(false);
@@ -454,7 +493,7 @@ function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) =>
       >
         <Input value={title} onChange={(e) => { setSent(false); setTitle(e.target.value); }} placeholder="Title (e.g. Holiday timings)" />
         <Input value={body} onChange={(e) => { setSent(false); setBody(e.target.value); }} placeholder="Message to all members" />
-        <Button type="submit">Broadcast</Button>
+        <Button type="submit" disabled={disabled}>Broadcast</Button>
       </form>
       {sent ? <p className="mt-3 text-sm text-primary">Announcement sent to all members.</p> : null}
     </GlassCard>
@@ -465,9 +504,11 @@ function AnnouncementCard({ onSend }: { onSend: (title: string, body: string) =>
 function ContactSettings({
   contacts,
   onSave,
+  disabled = false,
 }: {
   contacts: GymContacts;
   onSave: (v: GymContacts) => void;
+  disabled?: boolean;
 }) {
   const [form, setForm] = useState<GymContacts>(contacts);
   const [saved, setSaved] = useState(false);
@@ -522,7 +563,7 @@ function ContactSettings({
         {field("timings", "Gym timings", "Mon–Sat 5:30 AM – 10:30 PM")}
         {field("address", "Gym address", "12 Marine Lines, Mumbai 400020")}
         <div className="sm:col-span-2 flex items-center gap-3">
-          <Button type="submit">Save contacts</Button>
+          <Button type="submit" disabled={disabled}>Save contacts</Button>
           {saved ? <span className="text-sm text-primary">Saved — members see these instantly.</span> : null}
         </div>
       </form>
@@ -530,3 +571,116 @@ function ContactSettings({
   );
 }
 
+
+/** Platform billing: ₹2 per active member per month + ₹2,000 annual website renewal. */
+function BillingCard({
+  gymId,
+  bill,
+  renewal,
+  onPaid,
+}: {
+  gymId: string;
+  bill: ReturnType<typeof monthlyBill>;
+  renewal: ReturnType<typeof annualRenewal>;
+  onPaid: (v: {
+    gymId: string;
+    kind: "monthly" | "annual";
+    period: string;
+    amount: number;
+    method: "upi" | "cash" | "manual";
+    note?: string;
+  }) => void;
+}) {
+  const [openedUpi, setOpenedUpi] = useState<null | "monthly" | "annual">(null);
+
+  const pay = (kind: "monthly" | "annual", amount: number, period: string) => {
+    window.location.href = upiPayUrl(amount, `Kool Fit AI ${kind} fee ${period}`);
+    setOpenedUpi(kind);
+  };
+
+  const confirm = (kind: "monthly" | "annual", amount: number, period: string) => {
+    if (!gymId) return;
+    onPaid({ gymId, kind, period, amount, method: "upi" });
+    setOpenedUpi(null);
+    toast.success("Payment recorded. Super Admin will verify it.");
+  };
+
+  return (
+    <GlassCard className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <CreditCard className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold">Pay Monthly Fee (₹{PLATFORM_FEE_PER_MEMBER}/Member)</h2>
+            <p className="text-xs text-muted-foreground">
+              {bill.periodLabel} · {bill.activeMembers} active member{bill.activeMembers === 1 ? "" : "s"} ×
+              ₹{PLATFORM_FEE_PER_MEMBER}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+            bill.overdue
+              ? "bg-destructive/15 text-destructive"
+              : bill.paid
+                ? "bg-primary/15 text-primary"
+                : "bg-chart-3/15 text-chart-3"
+          }`}
+        >
+          {bill.overdue ? "Payment Overdue" : bill.paid ? "Paid" : "Due"}
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-2xl font-semibold">{inr(bill.amount)}</p>
+          <p className="text-xs text-muted-foreground">
+            Due by {bill.dueDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} ·
+            UPI {PLATFORM_UPI_ID}
+          </p>
+        </div>
+        {bill.paid ? (
+          <span className="shrink-0 text-sm text-primary">Cleared for this month</span>
+        ) : (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay by UPI</Button>
+            {openedUpi === "monthly" ? (
+              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("monthly", bill.amount, bill.period)}>
+                I have paid
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <CalendarClock className="size-4 shrink-0 text-chart-3" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">Annual Website Renewal Fee ({inr(ANNUAL_WEBSITE_FEE)})</p>
+            <p className="text-xs text-muted-foreground">
+              Live since {renewal.activatedOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} ·
+              renews {renewal.dueOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+        {renewal.paid ? (
+          <span className="shrink-0 text-sm text-primary">Renewed</span>
+        ) : renewal.dueSoon ? (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Renew by UPI</Button>
+            {openedUpi === "annual" ? (
+              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("annual", renewal.amount, renewal.period)}>
+                I have paid
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <span className="shrink-0 text-xs text-muted-foreground">Not due yet</span>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
