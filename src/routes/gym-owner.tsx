@@ -75,7 +75,7 @@ function OwnerDashboard() {
   );
 
   // Platform billing: ₹2 per active member each month + ₹2,000 website renewal.
-  const bill = monthlyBill(currentGym, state.users);
+  const bill = monthlyBill(currentGym, state.users, undefined, currentUser?.gymId);
   const renewal = annualRenewal(currentGym, currentUser?.joinedAt);
   const locked = bill.overdue;
 
@@ -645,7 +645,7 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Cleared for this month</span>
         ) : (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay by UPI</Button>
+            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay via UPI</Button>
             {openedUpi === "monthly" ? (
               <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("monthly", bill.amount, bill.period)}>
                 I have paid
@@ -670,7 +670,7 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Renewed</span>
         ) : renewal.dueSoon ? (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Renew by UPI</Button>
+            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Pay via UPI</Button>
             {openedUpi === "annual" ? (
               <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("annual", renewal.amount, renewal.period)}>
                 I have paid

@@ -14,7 +14,7 @@ export const ANNUAL_WEBSITE_FEE = 2000;
 /** Monthly invoices are due on the 7th of the month they cover. */
 export const MONTHLY_DUE_DAY = 7;
 /** Platform collection UPI handle used for the owner's UPI deep link. */
-export const PLATFORM_UPI_ID = "koolfitai@upi";
+export const PLATFORM_UPI_ID = "9674739943@ptyes";
 export const PLATFORM_UPI_NAME = "Kool Fit AI";
 
 export const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -61,9 +61,15 @@ export type MonthlyBill = {
   daysOverdue: number;
 };
 
-export function monthlyBill(gym: Gym | null | undefined, users: User[], now: Date = new Date()): MonthlyBill {
+export function monthlyBill(
+  gym: Gym | null | undefined,
+  users: User[],
+  now: Date = new Date(),
+  fallbackGymId?: string,
+): MonthlyBill {
   const period = billingPeriod(now);
-  const activeMembers = gym ? activeMemberCount(users, gym.id) : 0;
+  const gymId = gym?.id ?? fallbackGymId;
+  const activeMembers = gymId ? activeMemberCount(users, gymId) : 0;
   const amount = activeMembers * PLATFORM_FEE_PER_MEMBER;
   const payment = paymentsOf(gym).find((p) => p.kind === "monthly" && p.period === period);
   const dueDate = new Date(now.getFullYear(), now.getMonth(), MONTHLY_DUE_DAY, 23, 59, 59);
