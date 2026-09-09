@@ -670,7 +670,7 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Renewed</span>
         ) : renewal.dueSoon ? (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Renew by UPI</Button>
+            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Pay via UPI</Button>
             {openedUpi === "annual" ? (
               <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("annual", renewal.amount, renewal.period)}>
                 I have paid
