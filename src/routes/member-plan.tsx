@@ -58,17 +58,23 @@ function MemberPlanPage() {
             ) : (
               <div className="mt-4 space-y-2">
                 {plan.workout.map((w) => (
-                  <div key={w.name} className="rounded-xl border border-border/60 bg-secondary p-3">
-                    <p className="text-sm font-medium">{w.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {w.sets} · {w.notes}
-                    </p>
-                    <div className="mt-2">
-                      <YouTubeButton query={exerciseQuery(w.name)} />
+                  <div
+                    key={w.name}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-3 py-3 sm:px-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium">{w.name}</p>
+                      <p className="break-words text-xs text-muted-foreground">
+                        {w.sets} · {w.notes}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      <YouTubeButton query={exerciseQuery(w.name)} label="" className="px-2" />
                     </div>
                   </div>
                 ))}
               </div>
+
             )}
           </GlassCard>
           <GlassCard>
