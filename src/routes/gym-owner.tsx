@@ -75,7 +75,7 @@ function OwnerDashboard() {
   );
 
   // Platform billing: ₹2 per active member each month + ₹2,000 website renewal.
-  const bill = monthlyBill(currentGym, state.users);
+  const bill = monthlyBill(currentGym, state.users, undefined, currentUser?.gymId);
   const renewal = annualRenewal(currentGym, currentUser?.joinedAt);
   const locked = bill.overdue;
 

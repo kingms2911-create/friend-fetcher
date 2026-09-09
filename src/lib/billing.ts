@@ -61,9 +61,15 @@ export type MonthlyBill = {
   daysOverdue: number;
 };
 
-export function monthlyBill(gym: Gym | null | undefined, users: User[], now: Date = new Date()): MonthlyBill {
+export function monthlyBill(
+  gym: Gym | null | undefined,
+  users: User[],
+  now: Date = new Date(),
+  fallbackGymId?: string,
+): MonthlyBill {
   const period = billingPeriod(now);
-  const activeMembers = gym ? activeMemberCount(users, gym.id) : 0;
+  const gymId = gym?.id ?? fallbackGymId;
+  const activeMembers = gymId ? activeMemberCount(users, gymId) : 0;
   const amount = activeMembers * PLATFORM_FEE_PER_MEMBER;
   const payment = paymentsOf(gym).find((p) => p.kind === "monthly" && p.period === period);
   const dueDate = new Date(now.getFullYear(), now.getMonth(), MONTHLY_DUE_DAY, 23, 59, 59);
