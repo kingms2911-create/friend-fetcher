@@ -645,7 +645,7 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Cleared for this month</span>
         ) : (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay by UPI</Button>
+            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay via UPI</Button>
             {openedUpi === "monthly" ? (
               <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("monthly", bill.amount, bill.period)}>
                 I have paid
