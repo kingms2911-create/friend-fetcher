@@ -338,7 +338,7 @@ function Checklist({
         {items.map((i) => (
           <div
             key={i.id}
-            className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary p-3"
+            className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-3 py-3 sm:px-4"
           >
             <button
               type="button"
@@ -360,11 +360,13 @@ function Checklist({
                 <span className="block truncate text-xs text-muted-foreground">{i.detail}</span>
               </span>
             </button>
-            <YouTubeButton
-              query={kind === "workout" ? exerciseQuery(i.label) : recipeQuery(i.label)}
-              label=""
-              className="px-2"
-            />
+            <div className="flex shrink-0 items-center">
+              <YouTubeButton
+                query={kind === "workout" ? exerciseQuery(i.label) : recipeQuery(i.label)}
+                label=""
+                className="px-2"
+              />
+            </div>
           </div>
         ))}
       </div>
