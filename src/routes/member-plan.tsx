@@ -89,17 +89,23 @@ function MemberPlanPage() {
             ) : (
               <div className="mt-4 space-y-2">
                 {plan.diet.map((d) => (
-                  <div key={d.time} className="rounded-xl border border-border/60 bg-secondary p-3">
-                    <p className="text-sm font-medium">
-                      {d.time} · {d.meal}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{d.macros}</p>
-                    <div className="mt-2">
-                      <YouTubeButton query={recipeQuery(d.meal)} label="Recipe on YouTube" />
+                  <div
+                    key={d.time}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary px-3 py-3 sm:px-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium">
+                        {d.time} · {d.meal}
+                      </p>
+                      <p className="break-words text-xs text-muted-foreground">{d.macros}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      <YouTubeButton query={recipeQuery(d.meal)} label="" className="px-2" />
                     </div>
                   </div>
                 ))}
               </div>
+
             )}
           </GlassCard>
         </div>
