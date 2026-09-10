@@ -593,10 +593,7 @@ function BillingCard({
 }) {
   const [openedUpi, setOpenedUpi] = useState<null | "monthly" | "annual">(null);
 
-  const pay = (kind: "monthly" | "annual", amount: number, period: string) => {
-    window.location.href = upiPayUrl(amount, `Kool Fit AI ${kind} fee ${period}`);
-    setOpenedUpi(kind);
-  };
+  const pay = (kind: "monthly" | "annual") => setOpenedUpi(kind);
 
   const confirm = (kind: "monthly" | "annual", amount: number, period: string) => {
     if (!gymId) return;
@@ -645,12 +642,7 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Cleared for this month</span>
         ) : (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("monthly", bill.amount, bill.period)}>Pay via UPI</Button>
-            {openedUpi === "monthly" ? (
-              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("monthly", bill.amount, bill.period)}>
-                I have paid
-              </Button>
-            ) : null}
+            <Button onClick={() => pay("monthly")}>Pay via UPI</Button>
           </div>
         )}
       </div>
