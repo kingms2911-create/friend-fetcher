@@ -145,6 +145,8 @@ export type User = {
   calorieTarget?: number;
   /** today's logged consumption */
   foodLog?: FoodLogEntry[];
+  /** saved body-fat measurements, newest first */
+  bodyFatLog?: BodyFatEntry[];
 };
 
 export type FoodLogEntry = {
@@ -155,6 +157,16 @@ export type FoodLogEntry = {
   carbs: number;
   fat: number;
   at: string;
+};
+
+export type BodyFatEntry = {
+  id: string;
+  at: string;
+  percent: number;
+  fatMassKg: number;
+  leanMassKg: number;
+  weightKg: number;
+  category: string;
 };
 
 
@@ -564,6 +576,8 @@ type Ctx = {
   setCalorieTarget: (kcal: number) => void;
   logFood: (v: { label: string; kcal: number; protein: number; carbs: number; fat: number }) => void;
   removeFoodLog: (id: string) => void;
+  /** member saves a body-fat measurement to their profile history */
+  saveBodyFat: (v: Omit<BodyFatEntry, "id" | "at">) => void;
   /** affiliate store: super admin adds global products, owners add gym-local ones */
   addProduct: (v: { name: string; category: string; price: number; imageUrl: string; link: string; note: string }) => { ok: boolean; error?: string };
   removeProduct: (id: string) => void;
@@ -1411,6 +1425,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const saveBodyFat = useCallback<Ctx["saveBodyFat"]>((v) => {
+    setState((s) => ({
+      ...s,
+      users: s.users.map((u) =>
+        u.id === s.currentUserId
+          ? { ...u, bodyFatLog: [{ id: `bf_${uid()}`, at: iso(new Date()), ...v }, ...(u.bodyFatLog ?? [])].slice(0, 30) }
+          : u,
+      ),
+    }));
+  }, []);
+
   const logFood = useCallback<Ctx["logFood"]>((v) => {
     setState((s) => ({
       ...s,
@@ -1522,8 +1547,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Ctx>(
-    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
-    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
+    () => ({ state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, saveBodyFat, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue }),
+    [state, hydrated, currentUser, currentGym, signIn, signOut, registerGym, joinAsMember, confirmOnlinePayment, approveMemberPayment, rejectMember, refresh, createMember, createTrainer, resetPassword, recoverPassword, changeUserEmail, toggleAttendance, decideRequest, requestPlan, updateRequestPlan, markNotificationsRead, sendAnnouncement, toggleChecklist, updatePricing, purchaseMembership, demoSignIn, guestSignIn, requestRenewal, approveRenewal, setMemberActive, decideGymOwner, assignPlan, addLead, setLeadStatus, checkInMember, updateGymContacts, setGymActive, recordGymPayment, broadcastPlatform, setCalorieTarget, logFood, removeFoodLog, saveBodyFat, addProduct, removeProduct, visibleProducts, reportHealthIssue, markNotificationRead, resolveHealthIssue],
   );
 
 

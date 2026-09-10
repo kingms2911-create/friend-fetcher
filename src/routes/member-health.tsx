@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { HeartPulse, Send, AlertTriangle, Droplets, Activity, Move } from "lucide-react";
+import { HeartPulse, Send, AlertTriangle, Droplets, Activity, Move, Ruler, Save } from "lucide-react";
 import { AppShell, GlassCard } from "@/components/fitpulse/AppShell";
 import { MemberTabs } from "@/components/fitpulse/Tabs";
 import { YouTubeButton } from "@/components/fitpulse/YouTubeButton";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getHealthAdvice, HEALTH_DISCLAIMER, type HealthAdvice } from "@/lib/health-advisor";
+import { calcBodyFat } from "@/lib/body-fat";
 import { useStore } from "@/lib/fitpulse-store";
 
 export const Route = createFileRoute("/member-health")({
@@ -138,7 +139,166 @@ function MemberHealthPage() {
           </GlassCard>
         </div>
       ) : null}
+
+      <BodyFatCalculator />
     </AppShell>
+  );
+}
+
+const TONE: Record<string, string> = {
+  primary: "border-primary/50 bg-primary/15 text-primary",
+  "chart-3": "border-chart-3/50 bg-chart-3/10 text-chart-3",
+  destructive: "border-destructive/50 bg-destructive/10 text-destructive",
+};
+
+function BodyFatCalculator() {
+  const { currentUser, saveBodyFat } = useStore();
+  const [gender, setGender] = useState<"male" | "female">("male");
+  const [f, setF] = useState({ age: "", height: "", neck: "", waist: "", hip: "", weight: "" });
+  const [saved, setSaved] = useState(false);
+
+  const n = (v: string) => Number(v) || 0;
+  const result = calcBodyFat({
+    gender,
+    age: n(f.age),
+    heightCm: n(f.height),
+    neckCm: n(f.neck),
+    waistCm: n(f.waist),
+    hipCm: n(f.hip),
+    weightKg: n(f.weight),
+  });
+
+  const history = currentUser?.bodyFatLog ?? [];
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setF({ ...f, [k]: e.target.value });
+    setSaved(false);
+  };
+
+  const fields: Array<[keyof typeof f, string]> = [
+    ["age", "Age (years)"],
+    ["weight", "Weight (kg)"],
+    ["height", "Height (cm)"],
+    ["neck", "Neck (cm)"],
+    ["waist", "Waist (cm)"],
+  ];
+
+  return (
+    <GlassCard className="mt-6">
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-primary">
+          <Ruler className="size-4" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold">Body Fat % calculator</h2>
+          <p className="text-xs text-muted-foreground">US Navy method — tape measurements only.</p>
+        </div>
+      </div>
+
+      <div className="mt-4 inline-flex rounded-full border border-border/60 bg-secondary p-1">
+        {(["male", "female"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => {
+              setGender(g);
+              setSaved(false);
+            }}
+            className={`rounded-full px-4 py-1.5 text-xs font-medium capitalize transition-colors ${
+              gender === g ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {fields.map(([k, label]) => (
+          <div key={k} className="space-y-1">
+            <Label htmlFor={`bf-${k}`} className="text-xs text-muted-foreground">
+              {label}
+            </Label>
+            <Input id={`bf-${k}`} type="number" min={0} inputMode="decimal" value={f[k]} onChange={set(k)} />
+          </div>
+        ))}
+        {gender === "female" ? (
+          <div className="space-y-1">
+            <Label htmlFor="bf-hip" className="text-xs text-muted-foreground">
+              Hip (cm)
+            </Label>
+            <Input id="bf-hip" type="number" min={0} inputMode="decimal" value={f.hip} onChange={set("hip")} />
+          </div>
+        ) : null}
+      </div>
+
+      {result ? (
+        <div className="mt-5 rounded-2xl border border-border/60 bg-secondary p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-3xl font-semibold">{result.percent}%</p>
+              <p className="text-xs text-muted-foreground">{result.category.description}</p>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-xs font-medium ${TONE[result.category.tone]}`}>
+              {result.category.label}
+            </span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-accent">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${Math.min(100, (result.percent / 45) * 100)}%` }}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+              <p className="text-sm font-semibold">{result.leanMassKg} kg</p>
+              <p className="text-[11px] text-muted-foreground">Lean mass</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
+              <p className="text-sm font-semibold">{result.fatMassKg} kg</p>
+              <p className="text-[11px] text-muted-foreground">Fat mass</p>
+            </div>
+          </div>
+          <Button
+            className="mt-3"
+            disabled={!currentUser || saved}
+            onClick={() => {
+              saveBodyFat({
+                percent: result.percent,
+                fatMassKg: result.fatMassKg,
+                leanMassKg: result.leanMassKg,
+                weightKg: n(f.weight),
+                category: result.category.label,
+              });
+              setSaved(true);
+            }}
+          >
+            <Save className="size-4" /> {saved ? "Saved to profile" : "Save to Profile"}
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Fill in your measurements above to see your body fat percentage.
+        </p>
+      )}
+
+      {history.length ? (
+        <div className="mt-4 space-y-2">
+          <h3 className="text-sm font-semibold">Progress history</h3>
+          {history.slice(0, 6).map((h) => (
+            <div
+              key={h.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary px-3 py-2 text-xs"
+            >
+              <span className="min-w-0 flex-1 truncate">{new Date(h.at).toLocaleDateString("en-IN")}</span>
+              <span className="text-muted-foreground">
+                {h.weightKg} kg · {h.leanMassKg} kg lean
+              </span>
+              <span className="shrink-0 font-semibold text-primary">{h.percent}%</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </GlassCard>
   );
 }
 
