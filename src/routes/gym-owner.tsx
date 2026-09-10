@@ -593,10 +593,7 @@ function BillingCard({
 }) {
   const [openedUpi, setOpenedUpi] = useState<null | "monthly" | "annual">(null);
 
-  const pay = (kind: "monthly" | "annual", amount: number, period: string) => {
-    window.location.href = upiPayUrl(amount, `Kool Fit AI ${kind} fee ${period}`);
-    setOpenedUpi(kind);
-  };
+  const pay = (kind: "monthly" | "annual") => setOpenedUpi(kind);
 
   const confirm = (kind: "monthly" | "annual", amount: number, period: string) => {
     if (!gymId) return;
