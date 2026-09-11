@@ -27,6 +27,12 @@ export function UpiPayDialog({
 }) {
   const [dataUrl, setDataUrl] = useState("");
   const link = upiPayUrl(amount, note);
+  const paymentQuery = link.slice("upi://pay?".length);
+  const appLinks = [
+    { name: "GPay", href: `gpay://upi/pay?${paymentQuery}` },
+    { name: "PhonePe", href: `phonepe://pay?${paymentQuery}` },
+    { name: "Paytm", href: `paytmmp://pay?${paymentQuery}` },
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -79,16 +85,20 @@ export function UpiPayDialog({
             </Button>
           </div>
 
-          <Button asChild className="w-full">
-            <a href={link} target="_blank" rel="external noopener noreferrer">
-              <Smartphone className="size-4" /> Open UPI app
-            </a>
-          </Button>
+          <div className="grid w-full grid-cols-3 gap-2">
+            {appLinks.map((app) => (
+              <Button key={app.name} asChild size="sm">
+                <a href={app.href} target="_blank" rel="external noopener noreferrer">
+                  <Smartphone className="size-4" /> {app.name}
+                </a>
+              </Button>
+            ))}
+          </div>
           <Button variant="outline" className="w-full border-border/70 bg-secondary" onClick={onConfirmPaid}>
             <Check className="size-4" /> I have paid
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            "Open UPI app" only works on a phone with GPay, PhonePe or Paytm installed. On a laptop, scan the QR code.
+            Choose an installed payment app. If it does not open inside the preview, scan the QR code from the payment app.
           </p>
         </div>
       </DialogContent>
