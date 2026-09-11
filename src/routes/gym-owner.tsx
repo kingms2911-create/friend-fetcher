@@ -668,6 +668,23 @@ function BillingCard({
           <span className="shrink-0 text-xs text-muted-foreground">Not due yet</span>
         )}
       </div>
+
+      <UpiPayDialog
+        open={openedUpi !== null}
+        onOpenChange={(v) => setOpenedUpi(v ? openedUpi : null)}
+        amount={openedUpi === "annual" ? renewal.amount : bill.amount}
+        note={
+          openedUpi === "annual"
+            ? `Kool Fit AI website renewal ${renewal.period}`
+            : `Kool Fit AI monthly fee ${bill.period}`
+        }
+        title={openedUpi === "annual" ? "Annual website renewal" : "Monthly platform fee"}
+        onConfirmPaid={() =>
+          openedUpi === "annual"
+            ? confirm("annual", renewal.amount, renewal.period)
+            : confirm("monthly", bill.amount, bill.period)
+        }
+      />
     </GlassCard>
   );
 }
