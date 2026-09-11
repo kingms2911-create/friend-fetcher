@@ -14,8 +14,8 @@ import {
   annualRenewal,
   inr,
   monthlyBill,
-  upiPayUrl,
 } from "@/lib/billing";
+import { UpiPayDialog } from "@/components/fitpulse/UpiPayDialog";
 import { useStore, DEFAULT_PASSWORD, DEFAULT_PRICING, planLabel, type Pricing, type GymContacts } from "@/lib/fitpulse-store";
 
 
@@ -662,17 +662,29 @@ function BillingCard({
           <span className="shrink-0 text-sm text-primary">Renewed</span>
         ) : renewal.dueSoon ? (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={() => pay("annual", renewal.amount, renewal.period)}>Pay via UPI</Button>
-            {openedUpi === "annual" ? (
-              <Button variant="outline" className="border-border/70 bg-secondary" onClick={() => confirm("annual", renewal.amount, renewal.period)}>
-                I have paid
-              </Button>
-            ) : null}
+            <Button onClick={() => pay("annual")}>Pay via UPI</Button>
           </div>
         ) : (
           <span className="shrink-0 text-xs text-muted-foreground">Not due yet</span>
         )}
       </div>
+
+      <UpiPayDialog
+        open={openedUpi !== null}
+        onOpenChange={(v) => setOpenedUpi(v ? openedUpi : null)}
+        amount={openedUpi === "annual" ? renewal.amount : bill.amount}
+        note={
+          openedUpi === "annual"
+            ? `Kool Fit AI website renewal ${renewal.period}`
+            : `Kool Fit AI monthly fee ${bill.period}`
+        }
+        title={openedUpi === "annual" ? "Annual website renewal" : "Monthly platform fee"}
+        onConfirmPaid={() =>
+          openedUpi === "annual"
+            ? confirm("annual", renewal.amount, renewal.period)
+            : confirm("monthly", bill.amount, bill.period)
+        }
+      />
     </GlassCard>
   );
 }
