@@ -14,8 +14,8 @@ import {
   annualRenewal,
   inr,
   monthlyBill,
-  upiPayUrl,
 } from "@/lib/billing";
+import { UpiPayDialog } from "@/components/fitpulse/UpiPayDialog";
 import { useStore, DEFAULT_PASSWORD, DEFAULT_PRICING, planLabel, type Pricing, type GymContacts } from "@/lib/fitpulse-store";
 
 
