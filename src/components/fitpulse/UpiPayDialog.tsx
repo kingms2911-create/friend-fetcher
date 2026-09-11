@@ -31,7 +31,7 @@ export function UpiPayDialog({
   const appLinks = [
     { name: "GPay", href: `tez://upi/pay?${paymentQuery}` },
     { name: "PhonePe", href: `phonepe://pay?${paymentQuery}` },
-    { name: "Paytm", href: `paytmmp://upi/pay?${paymentQuery}` },
+    { name: "Paytm", href: `paytmmp://pay?${paymentQuery}` },
   ];
 
   useEffect(() => {
