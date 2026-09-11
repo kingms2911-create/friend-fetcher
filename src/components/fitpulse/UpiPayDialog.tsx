@@ -29,7 +29,7 @@ export function UpiPayDialog({
   const link = upiPayUrl(amount, note);
   const paymentQuery = link.slice("upi://pay?".length);
   const appLinks = [
-    { name: "GPay", href: `gpay://upi/pay?${paymentQuery}` },
+    { name: "GPay", href: `tez://upi/pay?${paymentQuery}` },
     { name: "PhonePe", href: `phonepe://pay?${paymentQuery}` },
     { name: "Paytm", href: `paytmmp://pay?${paymentQuery}` },
   ];
@@ -88,7 +88,7 @@ export function UpiPayDialog({
           <div className="grid w-full grid-cols-3 gap-2">
             {appLinks.map((app) => (
               <Button key={app.name} asChild size="sm">
-                <a href={app.href} target="_blank" rel="external noopener noreferrer">
+                <a href={app.href} rel="external">
                   <Smartphone className="size-4" /> {app.name}
                 </a>
               </Button>
