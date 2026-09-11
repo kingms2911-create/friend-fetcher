@@ -28,23 +28,6 @@ export function UpiPayDialog({
   const [dataUrl, setDataUrl] = useState("");
   const link = upiPayUrl(amount, note);
 
-  const openUpiApp = () => {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const target = isAndroid
-      ? `intent://${link.slice("upi://".length)}#Intent;scheme=upi;action=android.intent.action.VIEW;end`
-      : link;
-
-    // This must happen synchronously inside the tap event or mobile browsers
-    // and embedded webviews can silently block the external-app launch.
-    window.location.assign(target);
-
-    window.setTimeout(() => {
-      if (document.visibilityState === "visible") {
-        toast.info("No UPI app opened. Copy the UPI ID or scan the QR code instead.");
-      }
-    }, 1800);
-  };
-
   useEffect(() => {
     if (!open) return;
     let alive = true;
@@ -96,8 +79,10 @@ export function UpiPayDialog({
             </Button>
           </div>
 
-          <Button type="button" className="w-full" onClick={openUpiApp}>
-            <Smartphone className="size-4" /> Open UPI app
+          <Button asChild className="w-full">
+            <a href={link} target="_blank" rel="external noopener noreferrer">
+              <Smartphone className="size-4" /> Open UPI app
+            </a>
           </Button>
           <Button variant="outline" className="w-full border-border/70 bg-secondary" onClick={onConfirmPaid}>
             <Check className="size-4" /> I have paid
