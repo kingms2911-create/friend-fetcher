@@ -29,10 +29,27 @@ export function UpiPayDialog({
   const link = upiPayUrl(amount, note);
   const paymentQuery = link.slice("upi://pay?".length);
   const appLinks = [
-    { name: "GPay", href: `tez://upi/pay?${paymentQuery}` },
-    { name: "PhonePe", href: `phonepe://pay?${paymentQuery}` },
-    { name: "Paytm", href: `paytmmp://pay?${paymentQuery}` },
+    {
+      name: "GPay",
+      scheme: `tez://upi/pay?${paymentQuery}`,
+      androidIntent: `intent://upi/pay?${paymentQuery}#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end`,
+    },
+    {
+      name: "PhonePe",
+      scheme: `phonepe://pay?${paymentQuery}`,
+      androidIntent: `intent://pay?${paymentQuery}#Intent;scheme=phonepe;package=com.phonepe.app;end`,
+    },
+    {
+      name: "Paytm",
+      scheme: `paytmmp://pay?${paymentQuery}`,
+      androidIntent: `intent://pay?${paymentQuery}#Intent;scheme=paytmmp;package=net.one97.paytm;end`,
+    },
   ];
+
+  const openPaymentApp = (scheme: string, androidIntent: string) => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    window.location.assign(isAndroid ? androidIntent : scheme);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -87,10 +104,12 @@ export function UpiPayDialog({
 
           <div className="grid w-full grid-cols-3 gap-2">
             {appLinks.map((app) => (
-              <Button key={app.name} asChild size="sm">
-                <a href={app.href} rel="external">
-                  <Smartphone className="size-4" /> {app.name}
-                </a>
+              <Button
+                key={app.name}
+                size="sm"
+                onClick={() => openPaymentApp(app.scheme, app.androidIntent)}
+              >
+                <Smartphone className="size-4" /> {app.name}
               </Button>
             ))}
           </div>
